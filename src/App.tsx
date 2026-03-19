@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/navigation/Sidebar";
 import ProductsPage from "./pages/ProductsPage";
 import UsersPage from "./pages/UsersPage";
@@ -13,11 +13,14 @@ import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import AdminOrdersPage from "./pages/AdminOrdersPage";
+import DashboardPage from "./pages/DashboardPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import React from "react";
 import { SidebarProvider } from "./components/navigation/SidebarContext";
+import { ThemeProvider } from "./components/theme/ThemeContext";
+import ThemeToggle from "./components/theme/ThemeToggle";
 
 export const API_URL = import.meta.env.VITE_API_URL;
-//export const API_URL =  "http://localhost:8080";
 
 interface SessionPayload {
   admin?: boolean;
@@ -30,137 +33,62 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
   const checkSession = async () => {
     const session = Cookies.get("session");
-
-    if (!session) {
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-      setIsLoading(false);
-      return;
-    }
-
+    if (!session) { setIsAuthenticated(false); setIsAdmin(false); setIsLoading(false); return; }
     try {
       const response = await axios.get(`${API_URL}/protected`, {
-        headers: {
-          Authorization: `Bearer ${session}`,
-        },
+        headers: { Authorization: `Bearer ${session}` },
       });
-
       if (response.status === 200) {
         const decoded = jwtDecode<SessionPayload>(session);
         setIsAuthenticated(true);
         setIsAdmin(decoded.admin === true);
       } else {
-        Cookies.remove("session");
-        setIsAuthenticated(false);
-        setIsAdmin(false);
+        Cookies.remove("session"); setIsAuthenticated(false); setIsAdmin(false);
       }
-    } catch (err) {
-      console.error("Session validation failed:", err);
-      Cookies.remove("session");
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch {
+      Cookies.remove("session"); setIsAuthenticated(false); setIsAdmin(false);
+    } finally { setIsLoading(false); }
   };
 
-  useEffect(() => {
-
-    checkSession();
-  }, []);
+  useEffect(() => { checkSession(); }, []);
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
-      </div>
+      <ThemeProvider>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:"var(--bg-base)" }}>
+          <div style={{ width:"36px", height:"36px", border:"3px solid var(--accent-border)", borderTop:"3px solid var(--accent)", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      </ThemeProvider>
     );
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
-        <div className="fixed inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 opacity-80" />
-          <div className="absolute inset-0 backdrop-blur-sm" />
+    <ThemeProvider>
+      <SidebarProvider>
+        <div style={{ display:"flex", minHeight:"100vh", background:"var(--bg-base)", color:"var(--text-primary)", fontFamily:"'Manrope',sans-serif", position:"relative" }}>
+          <ThemeToggle />
+          {isAuthenticated && <Sidebar admin={isAdmin} />}
+          <Routes>
+            <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route path="/dashboard" element={<ProtectedRoute isAuthenticated={isAuthenticated}><DashboardPage /></ProtectedRoute>} />
+            <Route path="/gifts" element={<ProtectedRoute isAuthenticated={isAuthenticated}><ProductsPage /></ProtectedRoute>} />
+            {isAdmin && (<>
+              <Route path="/usersadminaccounts" element={<ProtectedRoute isAuthenticated={isAuthenticated}><UsersPage /></ProtectedRoute>} />
+              <Route path="/fortniteadminaccounts" element={<ProtectedRoute isAuthenticated={isAuthenticated}><FortniteAdminAccountsPage /></ProtectedRoute>} />
+              <Route path="/transactionsadminhistory" element={<ProtectedRoute isAuthenticated={isAuthenticated}><AdminOrdersPage /></ProtectedRoute>} />
+            </>)}
+            <Route path="/fortniteaccounts" element={<ProtectedRoute isAuthenticated={isAuthenticated}><FortniteAccountsPage /></ProtectedRoute>} />
+            <Route path="/transactionshistory" element={<ProtectedRoute isAuthenticated={isAuthenticated}><OrdersPage /></ProtectedRoute>} />
+            <Route path="/logout" element={<ProtectedRoute isAuthenticated={isAuthenticated}><LogoutPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
         </div>
-
-        {isAuthenticated && <Sidebar admin={isAdmin} />}
-
-        <Routes>
-        <Route
-          path="/"
-          element={
-            <LoginPage />
-          }
-        />
-        <Route
-          path="/gifts"
-          element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <ProductsPage />
-            </ProtectedRoute>
-          }
-        />
-        {isAdmin && (
-          <>
-            <Route
-              path="/usersadminaccounts"
-              element={
-                <ProtectedRoute isAuthenticated={isAuthenticated}>
-                  <UsersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/fortniteadminaccounts"
-              element={
-                <ProtectedRoute isAuthenticated={isAuthenticated}>
-                  <FortniteAdminAccountsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/transactionsadminhistory"
-              element={
-                <ProtectedRoute isAuthenticated={isAuthenticated}>
-                  <AdminOrdersPage />
-                </ProtectedRoute>
-              }
-            />
-          </>
-        )}
-        <Route
-          path="/fortniteaccounts"
-          element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <FortniteAccountsPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/transactionshistory"
-          element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <OrdersPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/logout"
-          element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <LogoutPage />
-            </ProtectedRoute>
-          }
-        />
-        </Routes>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </ThemeProvider>
   );
 };
 

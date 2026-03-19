@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { User, Key } from "lucide-react";
+import { User, Lock, Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { genSaltSync, hashSync } from "bcrypt-ts";
@@ -8,130 +8,138 @@ import React from "react";
 import { API_URL } from "../App";
 
 const LoginPage = () => {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState("");
-    const [session, setSession] = useState(Cookies.get("session") || null);
-    const salt = genSaltSync(14);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState(Cookies.get("session") || null);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(""); setLoading(true);
+    try {
+      const formData = new URLSearchParams();
+      formData.append("user", username); formData.append("password", password);
+      const res = await axios.post(`${API_URL}/loginform`, formData, {
+        headers: { "Content-Type":"application/x-www-form-urlencoded" }, withCredentials:true,
+      });
+      if (res.data.token) {
+        Cookies.set("session", res.data.token, { expires:30, secure:true, sameSite:"Strict" });
+        setSession(res.data.token);
+      }
+    } catch { setError("Credenciales inválidas"); }
+    finally { setLoading(false); }
+  };
 
-        try {
-            const formData = new URLSearchParams();
-            const hashedPassword = hashSync(password, salt);
-            formData.append("user", username);
-            formData.append("password", password);
+  useEffect(() => { if (session) window.location.href = "/dashboard"; }, [session]);
 
-            const res = await axios.post(
-                `${API_URL}/loginform`,
-                formData,
-                {
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                        //"Access-Control-Allow-Origin": "*",
-                    },
-                    withCredentials: true, // important if you expect cookies from the backend
-                }
-            );
-            if (res.data.token) {
+  const inp: React.CSSProperties = {
+    width:"100%", padding:"11px 14px 11px 38px", borderRadius:"10px",
+    background:"var(--bg-input)", border:"1px solid var(--border)",
+    color:"var(--text-primary)", fontSize:"14px",
+    fontFamily:"'Manrope',sans-serif", outline:"none", transition:"border-color 0.15s",
+  };
 
-                Cookies.set("session", res.data.token, {
-                    expires: 30, // 30 days
-                    secure: true,
-                    sameSite: "Strict",
-                });
-                setSession(res.data.token);
-                console.log("Login success", res.data);
-            }
-            // Redirect to dashboard or set auth state
-        } catch (err) {
-            console.error(err);
-            setError("Credenciales inválidas");
-        }
-    };
+  return (
+    <div style={{ width:"100vw", height:"100vh", display:"flex", alignItems:"center",
+      justifyContent:"center", background:"var(--bg-base)", fontFamily:"'Manrope',sans-serif",
+      transition:"background 0.25s ease" }}>
 
-    // Check if the user is already logged in
-    useEffect(() => {
-        if (session) {
-            // Redirect to dashboard or set auth state
-            window.location.href = "/gifts";
-            console.log("User is already logged in");
-        }
-    }, [session]);
+      {/* Glow decorativo solo en modo oscuro */}
+      <div style={{ position:"absolute", top:"20%", left:"50%", transform:"translateX(-50%)",
+        width:"500px", height:"500px",
+        background:"radial-gradient(circle, var(--accent-bg) 0%, transparent 70%)",
+        pointerEvents:"none" }} />
 
+      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
+        transition={{ duration:0.45, ease:"easeOut" }}
+        style={{ width:"100%", maxWidth:"400px", padding:"40px 36px", borderRadius:"20px",
+          background:"var(--bg-surface)", border:"1px solid var(--border)",
+          position:"relative", zIndex:1, boxShadow:"0 4px 40px rgba(0,0,0,0.08)",
+          transition:"background 0.25s ease, border-color 0.25s ease" }}>
 
-    return (
-        <div className='w-screen h-screen flex items-start justify-center bg-gray-900 pt-24'>
-            <motion.div
-                className='bg-gray-800 bg-opacity-50 backdrop-blur-md p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-700'
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-            >
-                <h2 className='text-2xl font-burbankBig text-white mb-6 text-center'>Iniciar Sesión</h2>
-                <form className='space-y-5' onSubmit={handleSubmit}>
-                    <div>
-                        <label className='block text-sm text-gray-300 mb-1' htmlFor='username'>
-                            Nombre de usuario
-                        </label>
-                        <div className='relative'>
-                            <User className='absolute left-3 top-2.5 text-gray-400' size={20} />
-                            <input
-                                type='text'
-                                id='username'
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className='w-full pl-10 pr-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                                placeholder='Ingresa tu usuario'
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className='block text-sm text-gray-300 mb-1' htmlFor='password'>
-                            Contraseña
-                        </label>
-                        <div className='relative'>
-                            <Key className='absolute left-3 top-2.5 text-gray-400' size={20} />
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                id='password'
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className='w-full pl-10 pr-10 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                                placeholder='Ingresa tu contraseña'
-                            />
-                            <button
-                                type='button'
-                                onClick={() => setShowPassword(!showPassword)}
-                                className='absolute right-2 top-2.5 text-sm text-blue-400 hover:text-blue-300 focus:outline-none'
-                            >
-                                {showPassword ? "Ocultar" : "Mostrar"}
-                            </button>
-                        </div>
-                    </div>
-
-                    {error && <p className='text-red-400 text-sm text-center font-burbankBold'>{error}</p>}
-
-                    <div className='flex items-center justify-between'>
-                        <button
-                            type='submit'
-                            className='bg-blue-600 hover:bg-blue-700 text-white font-burbankBold py-2 px-4 rounded-lg w-full transition-all'
-                        >
-                            Ingresar
-                        </button>
-                    </div>
-                </form>
-
-                <div className='mt-4 text-center'>
-                    <button className='text-sm text-blue-400 hover:underline'>¿Olvidaste tu contraseña?</button>
-                </div>
-            </motion.div>
+        <div style={{ textAlign:"center", marginBottom:"32px" }}>
+          <div style={{ display:"inline-flex", alignItems:"center", justifyContent:"center",
+            width:"52px", height:"52px", borderRadius:"14px",
+            background:"var(--accent-bg)", border:"1px solid var(--accent-border)", marginBottom:"16px" }}>
+            <Lock size={22} color="var(--accent)" />
+          </div>
+          <h1 style={{ fontFamily:"'ReadexPro',sans-serif", fontSize:"22px", fontWeight:700,
+            color:"var(--text-primary)", margin:"0 0 6px", letterSpacing:"-0.3px" }}>
+            Iniciar Sesión
+          </h1>
+          <p style={{ fontSize:"13px", color:"var(--text-muted)" }}>Bienvenido a KidStore</p>
         </div>
-    );
-};
 
+        <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:"16px" }}>
+          <div>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:600,
+              color:"var(--text-label)", letterSpacing:"0.06em",
+              textTransform:"uppercase", marginBottom:"7px" }}>Usuario</label>
+            <div style={{ position:"relative" }}>
+              <User size={15} color="var(--text-muted)"
+                style={{ position:"absolute", left:"13px", top:"50%", transform:"translateY(-50%)" }} />
+              <input type="text" value={username} onChange={e=>setUsername(e.target.value)}
+                placeholder="Ingresa tu usuario" autoComplete="username" style={inp}
+                onFocus={e=>(e.target.style.borderColor="var(--accent)")}
+                onBlur={e=>(e.target.style.borderColor="var(--border)")} />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display:"block", fontSize:"11px", fontWeight:600,
+              color:"var(--text-label)", letterSpacing:"0.06em",
+              textTransform:"uppercase", marginBottom:"7px" }}>Contraseña</label>
+            <div style={{ position:"relative" }}>
+              <Lock size={15} color="var(--text-muted)"
+                style={{ position:"absolute", left:"13px", top:"50%", transform:"translateY(-50%)" }} />
+              <input type={showPassword?"text":"password"} value={password}
+                onChange={e=>setPassword(e.target.value)}
+                placeholder="Ingresa tu contraseña" autoComplete="current-password"
+                style={{ ...inp, paddingRight:"42px" }}
+                onFocus={e=>(e.target.style.borderColor="var(--accent)")}
+                onBlur={e=>(e.target.style.borderColor="var(--border)")} />
+              <button type="button" onClick={()=>setShowPassword(!showPassword)}
+                style={{ position:"absolute", right:"13px", top:"50%", transform:"translateY(-50%)",
+                  background:"none", border:"none", cursor:"pointer", padding:0,
+                  display:"flex", alignItems:"center" }}>
+                {showPassword ? <EyeOff size={15} color="var(--text-muted)" />
+                  : <Eye size={15} color="var(--text-muted)" />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <motion.div initial={{ opacity:0, y:-4 }} animate={{ opacity:1, y:0 }}
+              style={{ padding:"10px 14px", borderRadius:"8px", background:"var(--danger-bg)",
+                border:"1px solid var(--danger-border)", color:"var(--danger)",
+                fontSize:"13px", textAlign:"center" }}>
+              {error}
+            </motion.div>
+          )}
+
+          <button type="submit" disabled={loading}
+            style={{ width:"100%", padding:"12px", borderRadius:"10px",
+              background: loading ? "var(--accent-border)" : "var(--accent)",
+              border:"none", color:"#fff", fontSize:"14px", fontWeight:700,
+              fontFamily:"'ReadexPro',sans-serif", cursor: loading ? "not-allowed" : "pointer",
+              transition:"all 0.15s" }}
+            onMouseEnter={e=>{ if(!loading) (e.currentTarget as HTMLElement).style.opacity="0.9"; }}
+            onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.opacity="1"; }}>
+            {loading ? "Ingresando..." : "Ingresar"}
+          </button>
+        </form>
+
+        <div style={{ marginTop:"20px", textAlign:"center" }}>
+          <button style={{ background:"none", border:"none", color:"var(--text-muted)",
+            fontSize:"12px", cursor:"pointer", fontFamily:"'Manrope',sans-serif" }}
+            onMouseEnter={e=>(e.currentTarget as HTMLElement).style.color="var(--accent)"}
+            onMouseLeave={e=>(e.currentTarget as HTMLElement).style.color="var(--text-muted)"}>
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 export default LoginPage;

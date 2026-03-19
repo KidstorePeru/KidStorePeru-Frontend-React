@@ -1,124 +1,240 @@
 import React, { useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import { Search } from "lucide-react";
-import { User } from "./type";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Pencil, Trash2, Mail, Calendar, User } from "lucide-react";
+import ConfirmModal from "../common/ConfirmModal";
+import { User as UserType } from "./type";
 
 interface Props {
-  users: User[];
+  users: UserType[];
   onDelete: (id: string) => void;
-  onUpdate: (user: User) => void;
+  onUpdate: (user: UserType) => void;
 }
+
+const ff = "'Manrope', sans-serif";
+
+const avatarColors = [
+  ["#8b5cf6", "#6d28d9"],
+  ["#3b82f6", "#1d4ed8"],
+  ["#ec4899", "#be185d"],
+  ["#f59e0b", "#d97706"],
+  ["#10b981", "#059669"],
+  ["#ef4444", "#dc2626"],
+];
 
 const UsersTable: React.FC<Props> = ({ users, onDelete, onUpdate }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [confirmName, setConfirmName] = useState<string>("");
 
-  const filteredUsers = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return users.filter(
-      (user) =>
-        user.username.toLowerCase().includes(term) ||
-        (user.email?.toLowerCase().includes(term) ?? false)
+  const filtered = useMemo(() => {
+    const t = searchTerm.toLowerCase();
+    return users.filter(u =>
+      u.username.toLowerCase().includes(t) ||
+      (u.email?.toLowerCase().includes(t) ?? false)
     );
   }, [searchTerm, users]);
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      onDelete(id);
-    }
+  const handleDelete = (id: string, username: string) => {
+    setConfirmId(id);
+    setConfirmName(username);
   };
 
+  const handleConfirmDelete = () => {
+    if (!confirmId) return;
+    setDeletingId(confirmId);
+    onDelete(confirmId);
+    setConfirmId(null);
+    setConfirmName("");
+  };
+
+  const getAvatarColors = (name: string) => {
+    const idx = name.charCodeAt(0) % avatarColors.length;
+    return avatarColors[idx];
+  };
+
+  // Columnas: usuario | email | fecha | acciones
+  // Acciones necesita 180px para los dos botones (73 + 84 + 6gap = 163px)
+  const GRID = "1fr 1fr 110px 180px";
+
   return (
-    <motion.div
-      className="bg-gray-800 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl p-4 sm:p-6 border border-gray-700"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
-    >
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Usuarios</h2>
-        <div className="relative w-full sm:w-auto">
+    <>
+      {confirmId && (
+        <ConfirmModal
+          title="Eliminar usuario"
+          message={`¿Seguro que quieres eliminar a "${confirmName}"? Esta acción no se puede deshacer.`}
+          confirmLabel="Eliminar usuario"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => { setConfirmId(null); setConfirmName(""); }}
+        />
+      )}
+    <div style={{
+      background: "var(--bg-modal)",
+      border: "1px solid var(--border)",
+      borderRadius: "16px",
+      overflow: "hidden",
+      fontFamily: ff,
+      transition: "background 0.25s, border-color 0.25s",
+    }}>
+      {/* Barra superior */}
+      <div style={{
+        padding: "14px 20px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: "1px solid var(--border)",
+        gap: "12px", flexWrap: "wrap" as const,
+      }}>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>
+          {filtered.length} usuario{filtered.length !== 1 ? "s" : ""}
+          {searchTerm && ` · filtrado${filtered.length !== 1 ? "s" : ""}`}
+        </span>
+        <div style={{ position: "relative", minWidth: "200px" }}>
+          <Search size={13} color="var(--text-muted)"
+            style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
           <input
-            type="text"
-            placeholder="Buscar usuarios..."
-            className="bg-gray-700 text-white placeholder-gray-400 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 text-sm sm:text-base"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            type="text" placeholder="Buscar usuario..."
+            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             autoComplete="off"
+            style={{
+              width: "100%", padding: "8px 12px 8px 32px", borderRadius: "9px",
+              background: "var(--bg-input)", border: "1px solid var(--border)",
+              color: "var(--text-primary)", fontSize: "12px", fontFamily: ff,
+              outline: "none", transition: "border-color 0.15s",
+            }}
+            onFocus={e => (e.target.style.borderColor = "var(--accent)")}
+            onBlur={e => (e.target.style.borderColor = "var(--border)")}
           />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-700 font-burbankBold">
-          <thead>
-            <tr>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th className="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Fecha de Creación
-              </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-gray-700">
-            {filteredUsers.map((user) => (
-              <motion.tr
-                key={user.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10">
-                      <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gradient-to-r from-purple-400 to-blue-500 flex items-center justify-center text-white font-semibold text-sm sm:text-base">
-                        {user.username.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                    <div className="ml-2 sm:ml-4">
-                      <div className="text-sm font-medium text-gray-100">{user.username}</div>
-                    </div>
-                  </div>
-                </td>
-
-                <td className="hidden sm:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-300">{user.email || "-"}</div>
-                </td>
-
-                <td className="hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-400">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </div>
-                </td>
-
-                <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  <button
-                    className="bg-blue-600 hover:bg-blue-700 px-3 py-1 text-xs rounded font-burbankBold mr-2"
-                    onClick={() => onUpdate(user)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    className="bg-red-600 hover:bg-red-700 px-3 py-1 text-xs rounded font-burbankBold"
-                    onClick={() => handleDelete(user.id)}
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Cabecera */}
+      <div style={{
+        display: "grid", gridTemplateColumns: GRID,
+        padding: "10px 20px",
+        background: "var(--bg-card)",
+        borderBottom: "1px solid var(--border)",
+      }}>
+        {["Usuario", "Email", "Fecha", "Acciones"].map(h => (
+          <span key={h} style={{
+            fontSize: "10px", fontWeight: 700, color: "var(--text-muted)",
+            letterSpacing: "0.08em", textTransform: "uppercase",
+          }}>{h}</span>
+        ))}
       </div>
-    </motion.div>
+
+      {/* Filas */}
+      <AnimatePresence>
+        {filtered.length === 0 ? (
+          <div style={{ padding: "48px 20px", textAlign: "center" }}>
+            <User size={28} color="var(--text-muted)" style={{ margin: "0 auto 10px", display: "block" }} />
+            <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
+              {searchTerm ? "No se encontraron usuarios" : "No hay usuarios registrados"}
+            </p>
+          </div>
+        ) : (
+          filtered.map((user, i) => {
+            const [c1, c2] = getAvatarColors(user.username);
+            const isDeleting = deletingId === user.id;
+            return (
+              <motion.div
+                key={user.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: isDeleting ? 0.4 : 1, y: 0 }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18, delay: i * 0.03 }}
+                style={{
+                  display: "grid", gridTemplateColumns: GRID,
+                  padding: "12px 20px", alignItems: "center",
+                  borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+              >
+                {/* Usuario */}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{
+                    width: "34px", height: "34px", borderRadius: "10px", flexShrink: 0,
+                    background: `linear-gradient(135deg, ${c1}, ${c2})`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "13px", fontWeight: 700, color: "#fff",
+                    boxShadow: `0 2px 8px ${c1}55`,
+                  }}>
+                    {user.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {user.username}
+                    </p>
+                    <p style={{ fontSize: "10px", color: "var(--text-muted)", margin: 0 }}>
+                      ID: {user.id?.slice(0, 8)}…
+                    </p>
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", minWidth: 0 }}>
+                  {user.email ? (
+                    <>
+                      <Mail size={11} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: "12px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {user.email}
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>—</span>
+                  )}
+                </div>
+
+                {/* Fecha */}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <Calendar size={11} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                    {new Date(user.createdAt).toLocaleDateString("es-PE")}
+                  </span>
+                </div>
+
+                {/* Acciones — 180px es suficiente para Editar(73) + gap(6) + Eliminar(84) = 163px */}
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <button
+                    onClick={() => onUpdate(user)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "5px",
+                      padding: "6px 12px", borderRadius: "8px",
+                      background: "rgba(139,92,246,0.1)",
+                      border: "1px solid rgba(139,92,246,0.3)",
+                      color: "var(--accent)", fontSize: "11px", fontWeight: 600,
+                      cursor: "pointer", fontFamily: ff, transition: "all 0.15s",
+                      whiteSpace: "nowrap" as const,
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.22)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(139,92,246,0.1)"}
+                  >
+                    <Pencil size={11} /> Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(user.id, user.username)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "5px",
+                      padding: "6px 12px", borderRadius: "8px",
+                      background: "var(--danger-bg)",
+                      border: "1px solid var(--danger-border)",
+                      color: "var(--danger)", fontSize: "11px", fontWeight: 600,
+                      cursor: "pointer", fontFamily: ff, transition: "all 0.15s",
+                      whiteSpace: "nowrap" as const,
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.2)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--danger-bg)"}
+                  >
+                    <Trash2 size={11} /> Eliminar
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })
+        )}
+      </AnimatePresence>
+    </div>
+    </>
   );
 };
 

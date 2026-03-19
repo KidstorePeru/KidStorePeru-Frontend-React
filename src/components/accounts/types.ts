@@ -4,6 +4,7 @@ export interface GiftSlotStatus {
     used_gifts: number;
     next_slot_available: string | null;
     time_until_next_slot: string | null;
+    slot_expiry_times: string[];
 }
 
 export type Account = {

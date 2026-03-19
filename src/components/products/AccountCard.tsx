@@ -5,7 +5,6 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { API_URL } from "../../App";
 import GiftSlotStatusInline from "./GiftSlotStatusInline";
-import "./GiftSlotStatus.css";
 
 interface AccountCardProps {
   account: Account;
@@ -17,110 +16,103 @@ interface AccountCardProps {
 }
 
 const AccountCard: React.FC<AccountCardProps> = ({
-  account,
-  selected,
-  onClick,
-  onRefresh,
-  handleAddPavos,
-  showGiftStatus = false,
+  account, selected, onClick, onRefresh, handleAddPavos, showGiftStatus = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const token = Cookies.get("session");
 
-  // Function to refresh pavos for a specific account
-  const refreshPavos = async (accountId: string) => {
-    try {
-      const response = await axios.post(
-        `${API_URL}/refreshpavos`,
-        {
-          account_id: accountId
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      const data = response.data;
-      
-      if (data.success) {
-        console.log('Pavos refreshed successfully:', data.data);
-        // Update your UI with the new pavos value
-        return data.data;
-      } else {
-        console.error('Failed to refresh pavos:', data.error);
-        throw new Error(data.error);
-      }
-    } catch (error) {
-      console.error('Error refreshing pavos:', error);
-      throw error;
-    }
-  };
-
   const handleRefresh = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsLoading(true);
+    e.stopPropagation(); setIsLoading(true);
     try {
-      const result = await refreshPavos(account.id);
-      // Call the parent's onRefresh callback to update the UI
+      await axios.post(`${API_URL}/refreshpavos`, { account_id: account.id },
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      );
       onRefresh?.();
-      console.log('Pavos updated:', result);
-    } catch (error) {
-      console.error('Failed to refresh pavos:', error);
-      // You could add a toast notification here
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setIsLoading(false); }
   };
 
+  const hasPavos = account.pavos && account.pavos > 0;
 
   return (
     <div
       onClick={onClick}
-      className={`account-card relative cursor-pointer border rounded-xl p-3 sm:p-4 shadow-xl transition transform hover:scale-105 min-h-[160px] ${
-        selected
-          ? "bg-blue-800 border-blue-500"
-          : "bg-slate-800 border-slate-600"
-      }`}
+      className="account-card"
+      style={{
+        position: "relative", cursor: "pointer", borderRadius: "16px", padding: "14px",
+        minHeight: "160px", transition: "all 0.2s",
+        background: selected ? "var(--accent-bg)" : "var(--bg-card)",
+        border: selected ? "1px solid var(--card-border-selected)" : "1px solid var(--border)",
+      }}
+      onMouseEnter={e => {
+        if (!selected) {
+          (e.currentTarget as HTMLElement).style.background = "var(--bg-card-hover)";
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-border)";
+          (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+        }
+      }}
+      onMouseLeave={e => {
+        if (!selected) {
+          (e.currentTarget as HTMLElement).style.background = "var(--bg-card)";
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+          (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+        }
+      }}
     >
-      <button
-        onClick={handleRefresh}
-        disabled={isLoading}
-        className="absolute top-1 right-1 bg-slate-700 p-1 rounded-full hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed z-10"
-        title="Actualizar pavos"
-      >
-        <FiRefreshCw className={`text-white text-sm ${isLoading ? 'animate-spin' : ''}`} />
-      </button>
+      {/* Botones top-right */}
+      <div style={{ position: "absolute", top: "8px", right: "8px", display: "flex", gap: "4px", zIndex: 10 }}>
+        <button
+          onClick={e => { e.stopPropagation(); handleAddPavos?.(); }}
+          style={{ width: "24px", height: "24px", borderRadius: "50%", border: "1px solid var(--success-border)", background: "var(--success-bg)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          title="Gestionar cuenta"
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(34,197,94,0.2)"}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--success-bg)"}
+        >
+          <FiPlus style={{ color: "var(--success)", fontSize: "11px" }} />
+        </button>
+        <button
+          onClick={handleRefresh} disabled={isLoading}
+          style={{ width: "24px", height: "24px", borderRadius: "50%", border: "1px solid var(--border)", background: "var(--bg-card)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: isLoading ? 0.4 : 1 }}
+          title="Actualizar pavos"
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card-hover)"}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"}
+        >
+          <FiRefreshCw className={isLoading ? "animate-spin" : ""} style={{ color: "var(--text-muted)", fontSize: "11px" }} />
+        </button>
+      </div>
 
-      <button
-        onClick={handleAddPavos}
-        className="absolute top-1 right-8 bg-green-600 p-1 rounded-full hover:bg-green-500 z-10"
-        title="Agregar pavos"
-      >
-        <FiPlus className="text-white text-sm" />
-      </button>
-
-      <div className="account-card-content pt-8">
-        <h3 className="text-lg sm:text-xl font-burbankBold mb-2 text-center text-pink-400">
+      <div style={{ paddingTop: "24px", display: "flex", flexDirection: "column", height: "100%" }}>
+        <h3 style={{ fontSize: "13px", fontWeight: 700, textAlign: "center", marginBottom: "8px", color: "var(--pink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {account.displayName}
         </h3>
-        <p className="text-xs sm:text-sm mb-2">💰 Pavos: {account.pavos}</p>
-        
+
+        <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+          <span style={{ fontSize: "13px" }}>🪙</span>
+          <span style={{ fontSize: "14px", fontWeight: 700, color: hasPavos ? "var(--gold)" : "var(--text-muted)" }}>
+            {account.pavos?.toLocaleString() ?? "0"}
+          </span>
+          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>pavos</span>
+        </div>
+
         {showGiftStatus ? (
-          <div className="gift-status-container">
-            <GiftSlotStatusInline 
-              giftSlotStatus={account.giftSlotStatus}
-            />
-          </div>
+          <GiftSlotStatusInline
+            giftSlotStatus={account.giftSlotStatus}
+            remainingGiftsOverride={account.remainingGifts}
+            accountId={account.id}  // ← clave: pasar el id para localStorage
+          />
         ) : (
-          <>
-            <p className="text-xs sm:text-sm font-burbankBold">📤 Enviados: {5-(account.remainingGifts  ?? 0)}</p>
-            <p className="text-xs sm:text-sm font-burbankBold">
-              🎁 Disponibles: {account.remainingGifts ?? 5}
-            </p>
-          </>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Enviados</span>
+              <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>{5 - (account.remainingGifts ?? 0)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Disponibles</span>
+              <span style={{ fontWeight: 600, color: (account.remainingGifts ?? 5) > 0 ? "var(--success)" : "var(--warning)" }}>
+                {account.remainingGifts ?? 5}
+              </span>
+            </div>
+          </div>
         )}
       </div>
     </div>

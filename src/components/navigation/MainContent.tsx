@@ -1,22 +1,15 @@
 import React, { ReactNode } from 'react';
 import { useSidebar } from './SidebarContext';
 
-interface MainContentProps {
-  children: ReactNode;
-}
-
-const MainContent: React.FC<MainContentProps> = ({ children }) => {
+const MainContent: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { isSidebarOpen } = useSidebar();
-
   return (
-    <div 
-      className={`flex-1 min-h-screen bg-gray-900 pt-16 sm:pt-20 px-4 sm:px-6 overflow-y-auto transition-all duration-300 ease-in-out ${
-        isSidebarOpen ? 'ml-64' : 'ml-20'
-      }`}
-    >
+    <div style={{ marginLeft: isSidebarOpen ? '240px' : '68px', minHeight:'100vh', width:'100%',
+      overflowY:'auto', overflowX:'hidden', padding:'28px 24px',
+      background:'var(--bg-base)', transition:'margin-left 0.3s ease, background 0.25s ease',
+      fontFamily:"'Manrope',sans-serif", boxSizing:'border-box' }}>
       {children}
     </div>
   );
 };
-
 export default MainContent;

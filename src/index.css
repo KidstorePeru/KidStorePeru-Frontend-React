@@ -2,39 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face { font-family:'BurbankBig'; src:url('./assets/fonts/Burbank Big Regular Black.woff2') format('woff2'); font-weight:900; }
+@font-face { font-family:'BurbankSmallMedium'; src:url('./assets/fonts/Burbank Small Medium.woff2') format('woff2'); font-weight:500; }
+@font-face { font-family:'BurbankSmallBold'; src:url('./assets/fonts/Burbank Small Bold.woff2') format('woff2'); font-weight:700; }
+@font-face { font-family:'BurbankSmallBlack'; src:url('./assets/fonts/Burbank Small Black.woff2') format('woff2'); font-weight:900; }
+@font-face { font-family:'Manrope'; src:url('./assets/fonts/Manrope-Regular.woff2') format('woff2'); font-weight:400; }
+@font-face { font-family:'Manrope'; src:url('./assets/fonts/Manrope-Medium.woff2') format('woff2'); font-weight:500; }
+@font-face { font-family:'Manrope'; src:url('./assets/fonts/Manrope-SemiBold.woff2') format('woff2'); font-weight:600; }
+@font-face { font-family:'Manrope'; src:url('./assets/fonts/Manrope-Bold.woff2') format('woff2'); font-weight:700; }
+@font-face { font-family:'ReadexPro'; src:url('./assets/fonts/ReadexPro-Regular.woff2') format('woff2'); font-weight:400; }
+@font-face { font-family:'ReadexPro'; src:url('./assets/fonts/ReadexPro-Medium.woff2') format('woff2'); font-weight:500; }
+@font-face { font-family:'ReadexPro'; src:url('./assets/fonts/ReadexPro-SemiBold.woff2') format('woff2'); font-weight:600; }
+@font-face { font-family:'ReadexPro'; src:url('./assets/fonts/ReadexPro-Bold.woff2') format('woff2'); font-weight:700; }
 
-/* Fuente Principal para títulos grandes */
-@font-face {
-    font-family: 'BurbankBig';
-    src: url('./assets/fonts/Burbank Big Regular Black.woff2') format('woff2');
-    font-weight: 900;
-    font-style: normal;
-  }
-  
-  /* Fuentes Small personalizadas */
-  @font-face {
-    font-family: 'BurbankSmallMedium';
-    src: url('./assets/fonts/Burbank Small Medium.woff2') format('woff2');
-    font-weight: 500;
-    font-style: normal;
-  }
-  
-  @font-face {
-    font-family: 'BurbankSmallBold';
-    src: url('./assets/fonts/Burbank Small Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
-  }
-  
-  @font-face {
-    font-family: 'BurbankSmallBlack';
-    src: url('./assets/fonts/Burbank Small Black.woff2') format('woff2');
-    font-weight: 900;
-    font-style: normal;
-  }
-  
-  /* Aplicar por defecto */
-  body {
-    font-family: 'BurbankSmallMedium', sans-serif;
-  }
-  
+:root, [data-theme="dark"] {
+  --bg-base:        #09090f;
+  --bg-surface:     #111118;
+  --bg-card:        rgba(255,255,255,0.03);
+  --bg-card-hover:  rgba(255,255,255,0.055);
+  --bg-sidebar:     #0b0b11;
+  --bg-input:       rgba(255,255,255,0.05);
+  --bg-modal:       #13131e;
+  --border:         rgba(255,255,255,0.07);
+  --border-strong:  rgba(255,255,255,0.13);
+  --border-active:  #8B5CF6;
+  --text-primary:   #ffffff;
+  --text-secondary: rgba(255,255,255,0.65);
+  --text-muted:     rgba(255,255,255,0.35);
+  --text-label:     rgba(255,255,255,0.45);
+  --accent:         #8B5CF6;
+  --accent-light:   #A78BFA;
+  --accent-bg:      rgba(139,92,246,0.14);
+  --accent-border:  rgba(139,92,246,0.35);
+  --success:        #22c55e;
+  --success-bg:     rgba(34,197,94,0.12);
+  --success-border: rgba(34,197,94,0.3);
+  --warning:        #f59e0b;
+  --warning-bg:     rgba(245,158,11,0.12);
+  --warning-border: rgba(245,158,11,0.3);
+  --danger:         #ef4444;
+  --danger-bg:      rgba(239,68,68,0.12);
+  --danger-border:  rgba(239,68,68,0.3);
+  --gold:           #FCD34D;
+  --pink:           #C084FC;
+  --blue-accent:    #60A5FA;
+  --scrollbar-thumb: rgba(255,255,255,0.1);
+  --scrollbar-hover: rgba(139,92,246,0.5);
+  --card-border-selected: rgba(139,92,246,0.5);
+}
+
+[data-theme="light"] {
+  --bg-base:        #f0f0f5;
+  --bg-surface:     #ffffff;
+  --bg-card:        #ffffff;
+  --bg-card-hover:  #f5f5fa;
+  --bg-sidebar:     #ffffff;
+  --bg-input:       #f5f5f8;
+  --bg-modal:       #ffffff;
+  --border:         #e2e2ea;
+  --border-strong:  #c5c5d5;
+  --border-active:  #7C3AED;
+  --text-primary:   #111118;
+  --text-secondary: #444455;
+  --text-muted:     #8888a0;
+  --text-label:     #666677;
+  --accent:         #7C3AED;
+  --accent-light:   #8B5CF6;
+  --accent-bg:      rgba(124,58,237,0.08);
+  --accent-border:  rgba(124,58,237,0.25);
+  --success:        #16a34a;
+  --success-bg:     rgba(22,163,74,0.1);
+  --success-border: rgba(22,163,74,0.25);
+  --warning:        #d97706;
+  --warning-bg:     rgba(217,119,6,0.1);
+  --warning-border: rgba(217,119,6,0.25);
+  --danger:         #dc2626;
+  --danger-bg:      rgba(220,38,38,0.08);
+  --danger-border:  rgba(220,38,38,0.22);
+  --gold:           #92400e;
+  --pink:           #7C3AED;
+  --blue-accent:    #1d4ed8;
+  --scrollbar-thumb: rgba(0,0,0,0.15);
+  --scrollbar-hover: rgba(124,58,237,0.4);
+  --card-border-selected: rgba(124,58,237,0.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 16px; }
+body {
+  font-family: 'Manrope', sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  margin: 0; padding: 0;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+h1,h2,h3,h4,h5,h6 { font-family:'ReadexPro',sans-serif; margin:0; }
+input,button,select,textarea { font-family:'Manrope',sans-serif; }
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius:4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+::selection { background:rgba(139,92,246,0.3); color:var(--text-primary); }
+
+@keyframes fadeInUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.account-card { animation: fadeInUp 0.2s ease forwards; }

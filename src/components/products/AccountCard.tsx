@@ -97,7 +97,6 @@ const AccountCard: React.FC<AccountCardProps> = ({
         {showGiftStatus ? (
           <GiftSlotStatusInline
             giftSlotStatus={account.giftSlotStatus}
-            remainingGiftsOverride={account.remainingGifts}
             accountId={account.id}  // ← clave: pasar el id para localStorage
           />
         ) : (

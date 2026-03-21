@@ -121,10 +121,12 @@ const ProductsPage: React.FC = () => {
           giftSlotStatus: acc.giftSlotStatus,
         })).sort((a: Account, b: Account) => {
           // Cuentas con slots disponibles primero, ordenadas de mayor a menor slots
-          const aReady = (a.remainingGifts ?? 0) > 0 ? 1 : 0;
-          const bReady = (b.remainingGifts ?? 0) > 0 ? 1 : 0;
+          const aRemaining = a.giftSlotStatus?.remaining_gifts ?? a.remainingGifts ?? 0;
+          const bRemaining = b.giftSlotStatus?.remaining_gifts ?? b.remainingGifts ?? 0;
+          const aReady = aRemaining > 0 ? 1 : 0;
+          const bReady = bRemaining > 0 ? 1 : 0;
           if (aReady !== bReady) return bReady - aReady;
-          return (b.remainingGifts ?? 0) - (a.remainingGifts ?? 0);
+          return bRemaining - aRemaining;
         });
         setAccounts(parsed);
         setAccountsKey(k => k + 1);

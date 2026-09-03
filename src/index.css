@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face { font-family:'BurbankBig'; src:url('/assets/fonts/Burbank Big Regular Black.woff2') format('woff2'); font-weight:900; }
-@font-face { font-family:'BurbankSmallMedium'; src:url('/assets/fonts/Burbank Small Medium.woff2') format('woff2'); font-weight:500; }
-@font-face { font-family:'BurbankSmallBold'; src:url('/assets/fonts/Burbank Small Bold.woff2') format('woff2'); font-weight:700; }
-@font-face { font-family:'BurbankSmallBlack'; src:url('/assets/fonts/Burbank Small Black.woff2') format('woff2'); font-weight:900; }
 @font-face { font-family:'Manrope'; src:url('/assets/fonts/Manrope-Regular.woff2') format('woff2'); font-weight:400; }
 @font-face { font-family:'Manrope'; src:url('/assets/fonts/Manrope-Medium.woff2') format('woff2'); font-weight:500; }
 @font-face { font-family:'Manrope'; src:url('/assets/fonts/Manrope-SemiBold.woff2') format('woff2'); font-weight:600; }

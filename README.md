@@ -35,7 +35,6 @@ The committed `.env` already targets the production backend.
 | `npm run build` | `tsc --noEmit` then `vite build` → `dist/` |
 | `npm run typecheck` | type check only |
 | `npm run lint` | ESLint over js/jsx/ts/tsx |
-| `npm start` | serve `dist/` on `$PORT` (used in production) |
 
 ## Structure
 
@@ -54,6 +53,6 @@ Auth: `POST /loginform` returns a JWT that is stored in the `session` cookie
 
 ## Deployment
 
-Railway builds via `nixpacks.toml` (`npm ci` → `npm run build` → `npm start`).
-Set `VITE_API_URL` as a build variable if it should differ from the committed
-`.env`.
+Deployed on Railway with Railpack: it runs `npm ci` + `npm run build` and
+serves the static `dist/` output. Set `VITE_API_URL` as a build variable if it
+should differ from the committed `.env`.

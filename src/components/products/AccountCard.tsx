@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { RefreshCw, Plus } from "lucide-react";
 import { Account } from "../accounts";
-import axios from "axios";
-import Cookies from "js-cookie";
-import { API_URL } from "../../App";
+import api from "../../lib/api";
 import GiftSlotStatusInline from "./GiftSlotStatusInline";
 
 interface AccountCardProps {
@@ -19,14 +17,11 @@ const AccountCard: React.FC<AccountCardProps> = ({
   account, selected, onClick, onRefresh, handleAddPavos, showGiftStatus = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const token = Cookies.get("session");
 
   const handleRefresh = async (e: React.MouseEvent) => {
     e.stopPropagation(); setIsLoading(true);
     try {
-      await axios.post(`${API_URL}/refreshpavos`, { account_id: account.id },
-        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
-      );
+      await api.post("/refreshpavos", { account_id: account.id });
       onRefresh?.();
     } catch (err) { console.error(err); }
     finally { setIsLoading(false); }

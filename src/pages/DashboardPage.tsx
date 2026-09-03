@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
-import { API_URL } from "../App";
+import api from "../lib/api";
 import MainContent from "../components/navigation/MainContent";
 import { Link } from "react-router-dom";
 import {
@@ -92,11 +91,9 @@ const DashboardPage: React.FC = () => {
     try {
       const [accRes, txRes] = await Promise.all([
         // Admin ve todas las cuentas, usuario solo las suyas
-        axios.get(`${API_URL}/${isAdmin ? "allfortniteaccounts" : "fortniteaccountsofuser"}`,
-          { headers: { Authorization: `Bearer ${token}` } }),
+        api.get(`/${isAdmin ? "allfortniteaccounts" : "fortniteaccountsofuser"}`),
         // Admin ve todas las transacciones, usuario solo las suyas
-        axios.get(`${API_URL}/${isAdmin ? "alltransactions" : "transactions"}`,
-          { headers: { Authorization: `Bearer ${token}` } }),
+        api.get(`/${isAdmin ? "alltransactions" : "transactions"}`),
       ]);
       setAccounts(accRes.data.gameAccounts || []);
       setTxs(txRes.data.transactions || []);

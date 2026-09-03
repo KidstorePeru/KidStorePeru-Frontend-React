@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Cookies from "js-cookie";
-import axios from "axios";
-import { API_URL } from "../App";
+import api from "../lib/api";
 import AccountsTable from "../components/accounts/AccontsTable";
 import AddAccountModal from "../components/accounts/AddAccountModal";
 import { Account, rawAccount, rawAccountResponse } from "../components/accounts";
@@ -16,13 +14,10 @@ const FortniteAdminAccountsPage = () => {
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const token = Cookies.get("session");
 
   const fetchAccounts = async () => {
     try {
-      const res = await axios.get(`${API_URL}/allfortniteaccounts`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/allfortniteaccounts");
       const data: rawAccountResponse = res.data;
       if (data.success && data.gameAccounts.length !== 0) {
         const parsed: Account[] = res.data.gameAccounts.map((acc: rawAccount) => ({
@@ -39,8 +34,7 @@ const FortniteAdminAccountsPage = () => {
 
   const deleteAccount = async (accountId: string) => {
     try {
-      const res = await axios.post(`${API_URL}/disconnectfortniteaccount`,
-        { id: accountId }, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post("/disconnectfortniteaccount", { id: accountId });
       if (res.status === 200) fetchAccounts();
     } catch (err) { console.error("Error deleting account", err); }
   };

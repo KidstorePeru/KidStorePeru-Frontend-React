@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import axios from "axios";
-import Cookies from "js-cookie";
-import { API_URL } from "../App";
+import api from "../lib/api";
 import ItemCard from "../components/products/ItemCard";
 import AccountCard from "../components/products/AccountCard";
 import GiftModal from "../components/products/GiftModal";
@@ -47,7 +45,6 @@ const ProductsPage: React.FC = () => {
   const [countdown, setCountdown] = useState("");
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const token = Cookies.get("session");
 
   useEffect(() => { fetchShop(); fetchAccounts(); }, []);
 
@@ -110,9 +107,7 @@ const ProductsPage: React.FC = () => {
 
   const fetchAccounts = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/fortniteaccountsofuser`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/fortniteaccountsofuser");
       const data: rawAccountResponse = res.data;
       if (data.success && data.gameAccounts.length !== 0) {
         const parsed: Account[] = res.data.gameAccounts.map((acc: rawAccount) => ({
@@ -141,7 +136,7 @@ const ProductsPage: React.FC = () => {
         });
       } else { setAccounts([]); }
     } catch (err) { console.error(err); }
-  }, [token]);
+  }, []);
 
   const sendGift = async (recipient: Friend, creatorCode: string) => {
     if (!selectedItem || !selectedAccount) return;
@@ -150,14 +145,14 @@ const ProductsPage: React.FC = () => {
         setLastGiftResponse({ success: false, error: "No hay slots disponibles." });
         setShowErrorModal(true); return;
       }
-      const res = await axios.post(`${API_URL}/sendGift`, {
+      const res = await api.post("/sendGift", {
         account_id: selectedAccount.id, sender_username: selectedAccount.displayName,
         receiver_id: recipient.id, receiver_username: recipient.username,
         gift_id: selectedItem.offerId || "", gift_price: selectedItem.finalPrice,
         gift_name: selectedItem.itemDisplay.name,
         message: `¡Disfruta tu regalo de ${selectedAccount.displayName}!`,
         gift_image: selectedItem.itemDisplay.image, creator_code: creatorCode,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       const data = res.data;
       if (data.success === true) {
         setLastGiftResponse({ ...data, sentAt: new Date().toISOString() }); setShowGiftModal(false); setShowSuccessModal(true); fetchAccounts();

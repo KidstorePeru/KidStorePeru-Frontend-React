@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import React from "react";
-import { API_URL } from "../App";
+import api from "../lib/api";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -19,8 +18,8 @@ const LoginPage = () => {
     try {
       const formData = new URLSearchParams();
       formData.append("user", username); formData.append("password", password);
-      const res = await axios.post(`${API_URL}/loginform`, formData, {
-        headers: { "Content-Type":"application/x-www-form-urlencoded" }, withCredentials:true,
+      const res = await api.post("/loginform", formData, {
+        headers: { "Content-Type":"application/x-www-form-urlencoded" },
       });
       if (res.data.token) {
         Cookies.set("session", res.data.token, { expires:30, secure:true, sameSite:"Strict" });

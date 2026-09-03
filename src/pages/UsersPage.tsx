@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
-import Cookies from "js-cookie";
-import axios from "axios";
+import api from "../lib/api";
 import UsersTable from "../components/users/UsersTable";
 import AddUserModal from "../components/users/AddUserModal";
 import { User } from "../components/users/type";
-import { API_URL } from "../App";
 import UpdateUserModal from "../components/users/UpdateUserModal";
 import MainContent from "../components/navigation/MainContent";
 import { UserPlus, Users } from "lucide-react";
@@ -19,13 +17,10 @@ const UsersPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const token = Cookies.get("session");
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${API_URL}/getalluser`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/getalluser");
       const users: User[] = res.data.map((user: any) => ({
         id: user.ID, username: user.Username,
         email: user.Email ?? "", createdAt: user.CreatedAt,
@@ -36,8 +31,7 @@ const UsersPage = () => {
 
   const addUser = async (user: Partial<User>) => {
     try {
-      const res = await axios.post(`${API_URL}/addnewuser`, user,
-        { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post("/addnewuser", user);
       if (res.status !== 200) throw new Error("Failed to add user");
       fetchUsers();
     } catch (err) { console.error("Error adding user", err); }
@@ -49,8 +43,7 @@ const UsersPage = () => {
 
   const submitUpdateUser = async (user: Partial<User>) => {
     try {
-      const res = await axios.post(`${API_URL}/updateuser`, user,
-        { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post("/updateuser", user);
       if (res.status !== 200) throw new Error("Failed to update user");
       fetchUsers();
     } catch (err) { console.error("Error updating user", err); }
@@ -58,8 +51,7 @@ const UsersPage = () => {
 
   const deleteUser = async (userId: string) => {
     try {
-      const res = await axios.post(`${API_URL}/removeusers`, [userId],
-        { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post("/removeusers", [userId]);
       if (res.status !== 200) throw new Error("Failed to delete user");
       fetchUsers();
     } catch (err) { console.error("Error deleting user", err); }

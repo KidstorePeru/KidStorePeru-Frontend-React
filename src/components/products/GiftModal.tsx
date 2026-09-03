@@ -2,9 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShopEntry } from "../../pages/ProductsPage";
 import { Account } from "../accounts";
-import axios from "axios";
-import { API_URL } from "../../App";
-import Cookies from "js-cookie";
+import api from "../../lib/api";
 import GiftSlotStatusInline from "./GiftSlotStatusInline";
 import { Search, X, Send, Copy, Check } from "lucide-react";
 
@@ -21,7 +19,6 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
   const [searchStatus, setSearchStatus] = useState<"none"|"loading"|"error"|"success">("none");
   const [errorMessage, setErrorMessage] = useState("");
   const [copied, setCopied] = useState(false);
-  const token = Cookies.get("session");
 
   if (!selectedItem || !selectedAccount) {
     return (
@@ -39,9 +36,8 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
   const handleSearch = async () => {
     setSearchStatus("loading"); setErrorMessage("");
     try {
-      const res = await axios.post(`${API_URL}/searchfortnitefriend`,
-        { display_name:searchName, account_id:selectedAccount.id },
-        { headers:{ Authorization:`Bearer ${token}` } }
+      const res = await api.post("/searchfortnitefriend",
+        { display_name:searchName, account_id:selectedAccount.id }
       );
       const data = res.data;
       if (data.error) {

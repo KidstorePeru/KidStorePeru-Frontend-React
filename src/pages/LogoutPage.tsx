@@ -1,14 +1,13 @@
-import Cookies from "js-cookie";
+import { useEffect } from "react";
+import { clearSession } from "../lib/api";
 
 const LogoutPage = () => {
+  useEffect(() => {
+    clearSession();
+    window.location.href = "/";
+  }, []);
 
-        Cookies.remove("session", { path: "/" });
-        window.location.href = "/"; // Redirect to login page or home page
-
-
-    return (
-        <></>
-    );
-    }
+  return null;
+};
 
 export default LogoutPage;

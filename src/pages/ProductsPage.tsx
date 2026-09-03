@@ -26,6 +26,7 @@ export interface ShopEntry {
 }
 
 const AUTO_REFRESH_INTERVAL = 60 * 1000; // 60 segundos
+const SHOP_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 min — cubre la rotación diaria de la tienda
 
 const ProductsPage: React.FC = () => {
   usePageTitle("Regalos");
@@ -125,12 +126,15 @@ const ProductsPage: React.FC = () => {
     } catch (err) { console.error(err); }
   }, []);
 
-  // Initial load + poll accounts every 60s.
+  // Initial load, then poll accounts every 60s and re-fetch the shop every
+  // 10 min so a stale offerId (after the daily rotation) can't cause a gift
+  // that silently fails at Epic.
   useEffect(() => {
     fetchShop();
     fetchAccounts();
-    const iv = setInterval(fetchAccounts, AUTO_REFRESH_INTERVAL);
-    return () => clearInterval(iv);
+    const accountsIv = setInterval(fetchAccounts, AUTO_REFRESH_INTERVAL);
+    const shopIv = setInterval(fetchShop, SHOP_REFRESH_INTERVAL);
+    return () => { clearInterval(accountsIv); clearInterval(shopIv); };
   }, [fetchShop, fetchAccounts]);
 
   const sendGift = async (recipient: Friend) => {
@@ -213,9 +217,14 @@ const ProductsPage: React.FC = () => {
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
             style={{ ...modalStyle, maxWidth: "380px" }}>
             <h2 style={{ fontFamily: "'ReadexPro',sans-serif", fontSize: "16px", color: "var(--danger)", marginBottom: "12px" }}>Error al enviar</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginBottom: "20px" }}>
+            <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginBottom: lastGiftResponse?.details ? "8px" : "20px" }}>
               {lastGiftResponse?.error || "No se pudo enviar el regalo."}
             </p>
+            {lastGiftResponse?.details && (
+              <p style={{ color: "var(--text-muted)", fontSize: "12px", marginBottom: "20px", fontFamily: "monospace", wordBreak: "break-word" }}>
+                {lastGiftResponse.details}
+              </p>
+            )}
             <button onClick={() => setShowErrorModal(false)}
               style={{ padding: "9px 20px", borderRadius: "9px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", fontSize: "13px", cursor: "pointer", fontFamily: "'Manrope',sans-serif" }}>
               Cerrar

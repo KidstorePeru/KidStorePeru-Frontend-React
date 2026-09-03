@@ -1,26 +1,58 @@
-<h1 align="center">React Admin Dashboard</h1>
+# KidStorePeru — Frontend
 
-![Demo App](/public/screenshot-for-readme-1.png)
-![Demo App](/public/screenshot-for-readme-2.png)
-![Demo App](/public/screenshot-for-readme-3.png)
+Admin dashboard for the KidStorePeru Fortnite gifting shop. Operators log in,
+connect Fortnite (Epic) accounts, browse the live item shop and send gifts;
+admins also manage users and see every account and transaction.
 
-[Video Tutorial on Youtube](https://youtu.be/gK0v_d91epk)
+## Stack
 
-### This is a free admin dashboard ui kit built with:
+- React 18 + Vite 5, TypeScript (strict)
+- React Router 6
+- axios (one shared instance in `src/lib/api.ts`)
+- Tailwind for a few utilities; most styling is inline
+- framer-motion, lucide-react
 
--   React
--   Tailwind CSS
--   Recharts
--   Framer Motion
+## Running locally
 
-It is completely responsive and can be used for any type of web application.
-
-### Run this app locally
-
-```shell
+```bash
 npm install
+npm run dev            # http://localhost:3000
 ```
 
-```shell
-npm run start
+Point it at a backend by creating `.env.local`:
+
 ```
+VITE_API_URL=http://localhost:8080
+```
+
+The committed `.env` already targets the production backend.
+
+## Scripts
+
+| Script | What |
+|---|---|
+| `npm run dev` | Vite dev server |
+| `npm run build` | `tsc --noEmit` then `vite build` → `dist/` |
+| `npm run typecheck` | type check only |
+| `npm run lint` | ESLint over js/jsx/ts/tsx |
+
+## Structure
+
+```
+src/lib/api.ts        shared axios instance: attaches the JWT, logs out on 401
+src/App.tsx           routing, session check, admin gating
+src/pages/            one file per screen
+src/components/        UI, grouped by feature
+src/hooks/            usePageTitle
+src/components/theme/  dark/light via CSS variables + localStorage
+```
+
+Auth: `POST /loginform` returns a JWT that is stored in the `session` cookie
+(`secure` only over HTTPS, 1-day expiry). Every request carries it as
+`Authorization: Bearer <jwt>`; a 401 clears the cookie and redirects to login.
+
+## Deployment
+
+Deployed on Railway with Railpack: it runs `npm ci` + `npm run build` and
+serves the static `dist/` output. Set `VITE_API_URL` as a build variable if it
+should differ from the committed `.env`.

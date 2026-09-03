@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
-import axios from "axios";
-import Cookies from "js-cookie";
-import { genSaltSync, hashSync } from "bcrypt-ts";
 import React from "react";
-import { API_URL } from "../App";
+import api, { getToken, setSessionToken } from "../lib/api";
+import axios from "axios";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -13,22 +11,29 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState(Cookies.get("session") || null);
+  const [session, setSession] = useState<string | null>(getToken() ?? null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
     try {
       const formData = new URLSearchParams();
       formData.append("user", username); formData.append("password", password);
-      const res = await axios.post(`${API_URL}/loginform`, formData, {
-        headers: { "Content-Type":"application/x-www-form-urlencoded" }, withCredentials:true,
+      const res = await api.post("/loginform", formData, {
+        headers: { "Content-Type":"application/x-www-form-urlencoded" },
       });
       if (res.data.token) {
-        Cookies.set("session", res.data.token, { expires:30, secure:true, sameSite:"Strict" });
+        setSessionToken(res.data.token);
         setSession(res.data.token);
+      } else {
+        setError("Respuesta inesperada del servidor");
       }
-    } catch { setError("Credenciales inválidas"); }
-    finally { setLoading(false); }
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setError("Usuario o contraseña incorrectos");
+      } else {
+        setError("No se pudo conectar. Intenta de nuevo.");
+      }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { if (session) window.location.href = "/dashboard"; }, [session]);
@@ -129,15 +134,6 @@ const LoginPage = () => {
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
-
-        <div style={{ marginTop:"20px", textAlign:"center" }}>
-          <button style={{ background:"none", border:"none", color:"var(--text-muted)",
-            fontSize:"12px", cursor:"pointer", fontFamily:"'Manrope',sans-serif" }}
-            onMouseEnter={e=>(e.currentTarget as HTMLElement).style.color="var(--accent)"}
-            onMouseLeave={e=>(e.currentTarget as HTMLElement).style.color="var(--text-muted)"}>
-            ¿Olvidaste tu contraseña?
-          </button>
-        </div>
       </motion.div>
     </div>
   );

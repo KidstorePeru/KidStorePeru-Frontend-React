@@ -1,10 +1,8 @@
 import { Menu, LogOut, Gamepad2, History, UserCheck, Gift, LayoutDashboard } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
-// @ts-ignore
 import imagotipo from "../../../assets/imagotipoo-kidstore.png";
 import { useSidebar } from "./SidebarContext";
-import React from "react";
 
 const ITEMS_ADMIN = [
   { name:"Dashboard", icon:LayoutDashboard, color:"#8B5CF6", href:"/dashboard" },

@@ -6,10 +6,6 @@ export default {
       fontFamily: {
         sans: ['Manrope', 'sans-serif'],
         heading: ['ReadexPro', 'sans-serif'],
-        burbankBig: ['BurbankBig', 'sans-serif'],
-        burbankMedium: ['BurbankSmallMedium', 'sans-serif'],
-        burbankBold: ['BurbankSmallBold', 'sans-serif'],
-        burbankBlack: ['BurbankSmallBlack', 'sans-serif'],
         manrope: ['Manrope', 'sans-serif'],
         readex: ['ReadexPro', 'sans-serif'],
       },

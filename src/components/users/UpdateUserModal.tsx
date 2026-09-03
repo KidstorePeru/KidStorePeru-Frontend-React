@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, Pencil, User, Mail, Lock } from "lucide-react";
+import { X, User, Mail, Lock } from "lucide-react";
 import { User as UserType } from "./type";
 
 interface Props {

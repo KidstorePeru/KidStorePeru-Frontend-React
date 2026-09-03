@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Transaction } from "./types";
 
 interface Props {
@@ -15,7 +15,6 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
   const [search, setSearch] = useState("");
   const [filterSender, setFilterSender] = useState("");
   const [page, setPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
 
   // Listas únicas para filtros
   const senders = useMemo(() =>
@@ -54,8 +53,6 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
 
   const getPriceColor = (price: number) =>
     price >= 2000 ? "#f59e0b" : price >= 1000 ? "#a78bfa" : price >= 500 ? "#60a5fa" : "#34d399";
-
-  const activeFilters = (filterSender ? 1 : 0);
 
   return (
     <div style={{

@@ -1,7 +1,12 @@
 import { Navigate, useLocation } from "react-router-dom";
 import React from "react";
 
-const ProtectedRoute = ({ isAuthenticated, children }) => {
+interface ProtectedRouteProps {
+  isAuthenticated: boolean;
+  children: React.ReactNode;
+}
+
+const ProtectedRoute = ({ isAuthenticated, children }: ProtectedRouteProps) => {
 
   const location = useLocation();
 

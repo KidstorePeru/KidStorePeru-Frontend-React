@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Cookies from "js-cookie";
-import axios from "axios";
-import { API_URL } from "../App";
+import api from "../lib/api";
 import { rawTransactionsResponse, Transaction } from "../components/orders/types";
 import MainContent from "../components/navigation/MainContent";
 import { History, TrendingUp, Gamepad2, Package } from "lucide-react";
@@ -15,14 +13,11 @@ const OrdersPage: React.FC = () => {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const token = Cookies.get("session");
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_URL}/transactions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/transactions");
       if (res.status !== 200) throw new Error("Failed");
       const data: rawTransactionsResponse = res.data;
       const list = data.success && data.transactions.map((tx: any) => ({

@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Cookies from "js-cookie";
-import axios from "axios";
-import { API_URL } from "../App";
+import api from "../lib/api";
 import { rawTransactionsResponse, Transaction } from "../components/orders/types";
 import MainContent from "../components/navigation/MainContent";
 import { History, TrendingUp, Users, Gamepad2, Package } from "lucide-react";
@@ -15,14 +13,11 @@ const AdminOrdersPage: React.FC = () => {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const token = Cookies.get("session");
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_URL}/alltransactions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/alltransactions");
       if (res.status !== 200) throw new Error("Failed to fetch transactions");
       const data: rawTransactionsResponse = res.data;
       const list = data.success && data.transactions.map((tx: any) => ({
@@ -53,13 +48,6 @@ const AdminOrdersPage: React.FC = () => {
   const totalVbucks = transactions.reduce((s, t) => s + (t.finalPrice || 0), 0);
   const uniqueReceivers = new Set(transactions.map(t => t.receiverName)).size;
   const uniqueSenders = new Set(transactions.map(t => t.senderName).filter(Boolean)).size;
-  const todayCount = transactions.filter(t => {
-    const d = new Date(t.createdAt);
-    const now = new Date();
-    return d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth() &&
-      d.getDate() === now.getDate();
-  }).length;
 
   const stats = [
     { icon: <Package size={18} color="#a78bfa" />, label: "Total regalos", value: transactions.length.toLocaleString(), bg: "rgba(139,92,246,0.1)", border: "rgba(139,92,246,0.2)" },

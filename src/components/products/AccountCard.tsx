@@ -1,9 +1,7 @@
 import React, { useState } from "react";
-import { FiRefreshCw, FiPlus } from "react-icons/fi";
+import { RefreshCw, Plus } from "lucide-react";
 import { Account } from "../accounts";
-import axios from "axios";
-import Cookies from "js-cookie";
-import { API_URL } from "../../App";
+import api from "../../lib/api";
 import GiftSlotStatusInline from "./GiftSlotStatusInline";
 
 interface AccountCardProps {
@@ -19,14 +17,11 @@ const AccountCard: React.FC<AccountCardProps> = ({
   account, selected, onClick, onRefresh, handleAddPavos, showGiftStatus = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const token = Cookies.get("session");
 
   const handleRefresh = async (e: React.MouseEvent) => {
     e.stopPropagation(); setIsLoading(true);
     try {
-      await axios.post(`${API_URL}/refreshpavos`, { account_id: account.id },
-        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
-      );
+      await api.post("/refreshpavos", { account_id: account.id });
       onRefresh?.();
     } catch (err) { console.error(err); }
     finally { setIsLoading(false); }
@@ -68,7 +63,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(34,197,94,0.2)"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--success-bg)"}
         >
-          <FiPlus style={{ color: "var(--success)", fontSize: "11px" }} />
+          <Plus size={11} style={{ color: "var(--success)" }} />
         </button>
         <button
           onClick={handleRefresh} disabled={isLoading}
@@ -77,7 +72,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card-hover)"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"}
         >
-          <FiRefreshCw className={isLoading ? "animate-spin" : ""} style={{ color: "var(--text-muted)", fontSize: "11px" }} />
+          <RefreshCw size={11} className={isLoading ? "animate-spin" : ""} style={{ color: "var(--text-muted)" }} />
         </button>
       </div>
 

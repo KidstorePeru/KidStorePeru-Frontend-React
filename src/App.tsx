@@ -11,16 +11,13 @@ import { useEffect, useState } from "react";
 import ProtectedRoute from "./components/navigation/ProtectedRoute";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
-import axios from "axios";
 import AdminOrdersPage from "./pages/AdminOrdersPage";
 import DashboardPage from "./pages/DashboardPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import React from "react";
 import { SidebarProvider } from "./components/navigation/SidebarContext";
 import { ThemeProvider } from "./components/theme/ThemeContext";
 import ThemeToggle from "./components/theme/ThemeToggle";
-
-export const API_URL = import.meta.env.VITE_API_URL;
+import api from "./lib/api";
 
 interface SessionPayload {
   admin?: boolean;
@@ -38,9 +35,7 @@ const App = () => {
     const session = Cookies.get("session");
     if (!session) { setIsAuthenticated(false); setIsAdmin(false); setIsLoading(false); return; }
     try {
-      const response = await axios.get(`${API_URL}/protected`, {
-        headers: { Authorization: `Bearer ${session}` },
-      });
+      const response = await api.get("/protected");
       if (response.status === 200) {
         const decoded = jwtDecode<SessionPayload>(session);
         setIsAuthenticated(true);

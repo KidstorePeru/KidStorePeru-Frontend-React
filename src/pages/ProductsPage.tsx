@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import Cookies from "js-cookie";
-import { API_URL } from "../App";
+import api from "../lib/api";
 import ItemCard from "../components/products/ItemCard";
 import AccountCard from "../components/products/AccountCard";
 import GiftModal from "../components/products/GiftModal";
@@ -46,10 +45,6 @@ const ProductsPage: React.FC = () => {
   const [lastGiftResponse, setLastGiftResponse] = useState<any>(null);
   const [countdown, setCountdown] = useState("");
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
-  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const token = Cookies.get("session");
-
-  useEffect(() => { fetchShop(); fetchAccounts(); }, []);
 
   // Cuenta regresiva UTC tienda
   useEffect(() => {
@@ -65,18 +60,7 @@ const ProductsPage: React.FC = () => {
     tick(); const iv = setInterval(tick, 1000); return () => clearInterval(iv);
   }, []);
 
-  // Auto-refresh de cuentas cada 60 segundos
-  useEffect(() => {
-    autoRefreshRef.current = setInterval(() => {
-      fetchAccounts();
-    }, AUTO_REFRESH_INTERVAL);
-
-    return () => {
-      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
-    };
-  }, []);
-
-  const fetchShop = async () => {
+  const fetchShop = useCallback(async () => {
     try {
       const res = await fetch("https://fortnite-api.com/v2/shop?language=es-419");
       const json = await res.json();
@@ -106,13 +90,11 @@ const ProductsPage: React.FC = () => {
       });
       setItemsByCategory(map); setLoading(false);
     } catch (err) { console.error(err); setLoading(false); }
-  };
+  }, []);
 
   const fetchAccounts = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/fortniteaccountsofuser`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/fortniteaccountsofuser");
       const data: rawAccountResponse = res.data;
       if (data.success && data.gameAccounts.length !== 0) {
         const parsed: Account[] = res.data.gameAccounts.map((acc: rawAccount) => ({
@@ -141,28 +123,40 @@ const ProductsPage: React.FC = () => {
         });
       } else { setAccounts([]); }
     } catch (err) { console.error(err); }
-  }, [token]);
+  }, []);
 
-  const sendGift = async (recipient: Friend, creatorCode: string) => {
+  // Initial load + poll accounts every 60s.
+  useEffect(() => {
+    fetchShop();
+    fetchAccounts();
+    const iv = setInterval(fetchAccounts, AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(iv);
+  }, [fetchShop, fetchAccounts]);
+
+  const sendGift = async (recipient: Friend) => {
     if (!selectedItem || !selectedAccount) return;
     try {
       if (selectedAccount.giftSlotStatus && selectedAccount.giftSlotStatus.remaining_gifts <= 0) {
         setLastGiftResponse({ success: false, error: "No hay slots disponibles." });
         setShowErrorModal(true); return;
       }
-      const res = await axios.post(`${API_URL}/sendGift`, {
+      const res = await api.post("/sendGift", {
         account_id: selectedAccount.id, sender_username: selectedAccount.displayName,
         receiver_id: recipient.id, receiver_username: recipient.username,
         gift_id: selectedItem.offerId || "", gift_price: selectedItem.finalPrice,
         gift_name: selectedItem.itemDisplay.name,
         message: `¡Disfruta tu regalo de ${selectedAccount.displayName}!`,
-        gift_image: selectedItem.itemDisplay.image, creator_code: creatorCode,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+        gift_image: selectedItem.itemDisplay.image,
+      });
       const data = res.data;
       if (data.success === true) {
         setLastGiftResponse({ ...data, sentAt: new Date().toISOString() }); setShowGiftModal(false); setShowSuccessModal(true); fetchAccounts();
       } else { setLastGiftResponse(data); setShowErrorModal(true); }
-    } catch { setShowGiftModal(false); setShowErrorModal(true); }
+    } catch (err) {
+      const apiError = axios.isAxiosError(err) ? err.response?.data : null;
+      setLastGiftResponse(apiError ?? { success: false, error: "No se pudo enviar el regalo." });
+      setShowGiftModal(false); setShowErrorModal(true);
+    }
   };
 
   const today = new Date();

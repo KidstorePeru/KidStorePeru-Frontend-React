@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import Cookies from "js-cookie";
-import { API_URL } from "../../App";
+import api from "../../lib/api";
 import { Account } from "../accounts";
 import { X, Plus, Edit2, ChevronRight, Check } from "lucide-react";
 import { saveManualGiftAdjust } from "./GiftSlotStatusInline";
@@ -38,7 +36,6 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
   const [giftError, setGiftError] = useState("");
   const [localGifts, setLocalGifts] = useState<number | null>(null);
 
-  const token = Cookies.get("session");
   const ff = "'Manrope', sans-serif";
   const currentGifts = localGifts !== null ? localGifts : (account.remainingGifts ?? 5);
 
@@ -56,10 +53,9 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
   const handleConfirmPavos = async () => {
     setLoading(true); setError("");
     try {
-      const res = await axios.post(
-        `${API_URL}/updatepavos`,
-        { account_id: account.id, type: opType, amount: Number(finalAmount) },
-        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      const res = await api.post(
+        "/updatepavos",
+        { account_id: account.id, type: opType, amount: Number(finalAmount) }
       );
       if (res.data.success) {
         if (onPavosUpdated && res.data.data) onPavosUpdated(res.data.data);
@@ -81,10 +77,9 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
     if (!amt || amt <= 0) return;
     setGiftLoading(true); setGiftSuccess(""); setGiftError("");
     try {
-      const res = await axios.post(
-        `${API_URL}/updateremaininggifts`,
-        { account_id: account.id, type: giftOp, amount: amt },
-        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      const res = await api.post(
+        "/updateremaininggifts",
+        { account_id: account.id, type: giftOp, amount: amt }
       );
       if (res.data.success) {
         const newVal = res.data.new_remaining;

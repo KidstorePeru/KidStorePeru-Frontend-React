@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import Cookies from "js-cookie";
-import { API_URL } from "../../App";
+import api from "../../lib/api";
 import { X, Link, CheckCircle, AlertCircle, ExternalLink, Copy, Check } from "lucide-react";
 
 interface Props {
@@ -22,9 +20,7 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
   const handleInit = async () => {
     setStatus("loading");
     try {
-      const token = Cookies.get("session");
-      const res = await axios.post(`${API_URL}/connectfaccount`, {},
-        { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post("/connectfaccount", {});
 
       if (res.status === 200 && res.data.success && res.data.verification_uri_complete && res.data.device_code) {
         setUserCode(res.data.user_code);
@@ -45,10 +41,7 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
     if (!deviceCode) return;
     setStatus("loading");
     try {
-      const token = Cookies.get("session");
-      const res = await axios.post(`${API_URL}/finishconnectfaccount`,
-        { device_code: deviceCode },
-        { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.post("/finishconnectfaccount", { device_code: deviceCode });
 
       if (res.status === 200) {
         setStatus("success");

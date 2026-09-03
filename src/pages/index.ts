@@ -1,5 +1,0 @@
-export * from "./LoginPage"
-export * from "./OrdersPage"
-export * from "./ProductsPage"
-export * from "./UsersPage"
-export * from "./LogoutPage"

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FiRefreshCw, FiPlus } from "react-icons/fi";
+import { RefreshCw, Plus } from "lucide-react";
 import { Account } from "../accounts";
 import axios from "axios";
 import Cookies from "js-cookie";
@@ -68,7 +68,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(34,197,94,0.2)"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--success-bg)"}
         >
-          <FiPlus style={{ color: "var(--success)", fontSize: "11px" }} />
+          <Plus size={11} style={{ color: "var(--success)" }} />
         </button>
         <button
           onClick={handleRefresh} disabled={isLoading}
@@ -77,7 +77,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card-hover)"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"}
         >
-          <FiRefreshCw className={isLoading ? "animate-spin" : ""} style={{ color: "var(--text-muted)", fontSize: "11px" }} />
+          <RefreshCw size={11} className={isLoading ? "animate-spin" : ""} style={{ color: "var(--text-muted)" }} />
         </button>
       </div>
 

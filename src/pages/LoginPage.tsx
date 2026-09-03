@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { genSaltSync, hashSync } from "bcrypt-ts";
 import React from "react";
 import { API_URL } from "../App";
 

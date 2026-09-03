@@ -15,6 +15,14 @@ export const SESSION_COOKIE = "session";
 export const getToken = () => Cookies.get(SESSION_COOKIE);
 export const clearSession = () => Cookies.remove(SESSION_COOKIE);
 
+/** Stores the session JWT. `secure` is only set over HTTPS so local dev works. */
+export const setSessionToken = (token: string) =>
+  Cookies.set(SESSION_COOKIE, token, {
+    expires: 1, // matches the backend's 24h token lifetime
+    secure: window.location.protocol === "https:",
+    sameSite: "Strict",
+  });
+
 /**
  * Shared axios instance. Automatically attaches the session token and, on a
  * 401, clears the session and bounces the user to the login screen.

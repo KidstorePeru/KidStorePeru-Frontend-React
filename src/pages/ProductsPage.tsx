@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import axios from "axios";
 import api from "../lib/api";
 import ItemCard from "../components/products/ItemCard";
 import AccountCard from "../components/products/AccountCard";
@@ -132,7 +133,7 @@ const ProductsPage: React.FC = () => {
     return () => clearInterval(iv);
   }, [fetchShop, fetchAccounts]);
 
-  const sendGift = async (recipient: Friend, creatorCode: string) => {
+  const sendGift = async (recipient: Friend) => {
     if (!selectedItem || !selectedAccount) return;
     try {
       if (selectedAccount.giftSlotStatus && selectedAccount.giftSlotStatus.remaining_gifts <= 0) {
@@ -145,13 +146,17 @@ const ProductsPage: React.FC = () => {
         gift_id: selectedItem.offerId || "", gift_price: selectedItem.finalPrice,
         gift_name: selectedItem.itemDisplay.name,
         message: `¡Disfruta tu regalo de ${selectedAccount.displayName}!`,
-        gift_image: selectedItem.itemDisplay.image, creator_code: creatorCode,
+        gift_image: selectedItem.itemDisplay.image,
       });
       const data = res.data;
       if (data.success === true) {
         setLastGiftResponse({ ...data, sentAt: new Date().toISOString() }); setShowGiftModal(false); setShowSuccessModal(true); fetchAccounts();
       } else { setLastGiftResponse(data); setShowErrorModal(true); }
-    } catch { setShowGiftModal(false); setShowErrorModal(true); }
+    } catch (err) {
+      const apiError = axios.isAxiosError(err) ? err.response?.data : null;
+      setLastGiftResponse(apiError ?? { success: false, error: "No se pudo enviar el regalo." });
+      setShowGiftModal(false); setShowErrorModal(true);
+    }
   };
 
   const today = new Date();

@@ -10,7 +10,7 @@ export interface Friend { id:string; username:string; isGiftable:boolean; }
 
 interface GiftModalProps {
   onClose:()=>void; selectedItem:ShopEntry|null;
-  selectedAccount:Account|null; onSend:(recipient:Friend,creatorCode:string)=>void;
+  selectedAccount:Account|null; onSend:(recipient:Friend)=>void;
 }
 
 const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAccount, onSend }) => {
@@ -41,7 +41,8 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
       );
       const data = res.data;
       if (data.error) {
-        if (data.error==="Could not refresh access token") { onClose(); window.location.href="/fortniteaccounts"; return; }
+        // A dead account token means the account needs re-linking.
+        if (/token|refresh/i.test(String(data.error))) { onClose(); window.location.href = "/fortniteaccounts"; return; }
         setSearchStatus("error"); setSearchResult(null); setErrorMessage(data.error); return;
       }
       const friend: Friend = { id:data.accountId, username:data.displayName, isGiftable:data.giftable };
@@ -56,7 +57,7 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
 
   const handleSend = () => {
     if (!searchResult||noSlots) return;
-    onSend(searchResult,"KIDDX"); onClose();
+    onSend(searchResult); onClose();
   };
 
   const handleCopyImage = async () => {

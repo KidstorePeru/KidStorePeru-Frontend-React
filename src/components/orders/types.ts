@@ -15,4 +15,4 @@ export interface Transaction {
 export interface rawTransactionsResponse {
   success: boolean;
   transactions: Transaction[];
-};
+}

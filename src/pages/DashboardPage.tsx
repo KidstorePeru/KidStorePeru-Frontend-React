@@ -6,7 +6,7 @@ import api from "../lib/api";
 import MainContent from "../components/navigation/MainContent";
 import { Link } from "react-router-dom";
 import {
-  LayoutDashboard, Gift, TrendingUp, Gamepad2,
+  LayoutDashboard, Gift, TrendingUp,
   Coins, Users, Trophy, Clock, ChevronRight,
   CheckCircle, RefreshCw,
 } from "lucide-react";
@@ -100,7 +100,7 @@ const DashboardPage: React.FC = () => {
       setLastUpdated(new Date());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [token, isAdmin]);
+  }, [isAdmin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 

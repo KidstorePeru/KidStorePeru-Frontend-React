@@ -18,7 +18,8 @@ const formatDiff = (diff: number): string => {
 };
 
 const GiftSlotStatusInline: React.FC<Props> = ({ giftSlotStatus, remainingGiftsOverride }) => {
-  const [tick, setTick] = useState(0);
+  // Forces a re-render every second so the countdown timers stay live.
+  const [, setTick] = useState(0);
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(iv);

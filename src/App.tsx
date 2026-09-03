@@ -14,7 +14,6 @@ import { jwtDecode } from "jwt-decode";
 import AdminOrdersPage from "./pages/AdminOrdersPage";
 import DashboardPage from "./pages/DashboardPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import React from "react";
 import { SidebarProvider } from "./components/navigation/SidebarContext";
 import { ThemeProvider } from "./components/theme/ThemeContext";
 import ThemeToggle from "./components/theme/ThemeToggle";

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { X, UserPlus, User, Mail, Lock } from "lucide-react";
 import { User as UserType } from "./type";
 
@@ -64,6 +64,7 @@ const AddUserModal: React.FC<Props> = ({ onClose, onSave }) => {
                 placeholder={placeholder}
                 value={value}
                 onChange={e => onChange(e.target.value)}
+                required={required}
                 autoComplete="off"
                 style={{
                   width: "100%", padding: "10px 12px 10px 32px",

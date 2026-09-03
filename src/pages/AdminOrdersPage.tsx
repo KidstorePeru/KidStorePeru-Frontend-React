@@ -48,13 +48,6 @@ const AdminOrdersPage: React.FC = () => {
   const totalVbucks = transactions.reduce((s, t) => s + (t.finalPrice || 0), 0);
   const uniqueReceivers = new Set(transactions.map(t => t.receiverName)).size;
   const uniqueSenders = new Set(transactions.map(t => t.senderName).filter(Boolean)).size;
-  const todayCount = transactions.filter(t => {
-    const d = new Date(t.createdAt);
-    const now = new Date();
-    return d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth() &&
-      d.getDate() === now.getDate();
-  }).length;
 
   const stats = [
     { icon: <Package size={18} color="#a78bfa" />, label: "Total regalos", value: transactions.length.toLocaleString(), bg: "rgba(139,92,246,0.1)", border: "rgba(139,92,246,0.2)" },

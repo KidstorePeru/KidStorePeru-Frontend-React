@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import api from "../lib/api";
 import ItemCard from "../components/products/ItemCard";
 import AccountCard from "../components/products/AccountCard";
@@ -44,9 +44,6 @@ const ProductsPage: React.FC = () => {
   const [lastGiftResponse, setLastGiftResponse] = useState<any>(null);
   const [countdown, setCountdown] = useState("");
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
-  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => { fetchShop(); fetchAccounts(); }, []);
 
   // Cuenta regresiva UTC tienda
   useEffect(() => {
@@ -62,18 +59,7 @@ const ProductsPage: React.FC = () => {
     tick(); const iv = setInterval(tick, 1000); return () => clearInterval(iv);
   }, []);
 
-  // Auto-refresh de cuentas cada 60 segundos
-  useEffect(() => {
-    autoRefreshRef.current = setInterval(() => {
-      fetchAccounts();
-    }, AUTO_REFRESH_INTERVAL);
-
-    return () => {
-      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
-    };
-  }, []);
-
-  const fetchShop = async () => {
+  const fetchShop = useCallback(async () => {
     try {
       const res = await fetch("https://fortnite-api.com/v2/shop?language=es-419");
       const json = await res.json();
@@ -103,7 +89,7 @@ const ProductsPage: React.FC = () => {
       });
       setItemsByCategory(map); setLoading(false);
     } catch (err) { console.error(err); setLoading(false); }
-  };
+  }, []);
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -137,6 +123,14 @@ const ProductsPage: React.FC = () => {
       } else { setAccounts([]); }
     } catch (err) { console.error(err); }
   }, []);
+
+  // Initial load + poll accounts every 60s.
+  useEffect(() => {
+    fetchShop();
+    fetchAccounts();
+    const iv = setInterval(fetchAccounts, AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(iv);
+  }, [fetchShop, fetchAccounts]);
 
   const sendGift = async (recipient: Friend, creatorCode: string) => {
     if (!selectedItem || !selectedAccount) return;

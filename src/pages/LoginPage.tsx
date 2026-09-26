@@ -30,6 +30,8 @@ const LoginPage = () => {
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         setError("Usuario o contraseña incorrectos");
+      } else if (axios.isAxiosError(err) && err.response?.status === 429) {
+        setError(err.response.data?.error || "Demasiados intentos. Espera unos minutos.");
       } else {
         setError("No se pudo conectar. Intenta de nuevo.");
       }

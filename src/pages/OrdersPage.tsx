@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../lib/api";
-import { rawTransactionsResponse, Transaction } from "../components/orders/types";
+import { isWebGift, rawTransactionsResponse, Transaction } from "../components/orders/types";
 import MainContent from "../components/navigation/MainContent";
 import { History, TrendingUp, Gamepad2, Package } from "lucide-react";
 import OrdersTable from "../components/orders/OrdersTable";
@@ -28,7 +28,8 @@ const OrdersPage: React.FC = () => {
         regularPrice: tx.RegularPrice, finalPrice: tx.FinalPrice,
         giftImage: tx.GiftImage, createdAt: tx.CreatedAt,
       }));
-      setTransactions((list || []).reverse());
+      // Newest first, explicitly (do not rely on the order the server returns).
+      setTransactions((list || []).sort((a: Transaction, b: Transaction) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (err) {
       console.error("Error fetching transactions", err);
     } finally {
@@ -39,12 +40,14 @@ const OrdersPage: React.FC = () => {
   useEffect(() => { fetchTransactions(); }, []);
 
   // Stats relevantes para el usuario
-  const totalVbucks = transactions.reduce((s, t) => s + (t.finalPrice || 0), 0);
-  const uniqueReceivers = new Set(transactions.map(t => t.receiverName)).size;
-  const uniqueSenders = new Set(transactions.map(t => t.senderName).filter(Boolean)).size;
+  // Only gifts sent from this web count (not manual adjustments or gifts read from Epic).
+  const gifts = transactions.filter(t => isWebGift(t.objectStoreID));
+  const totalVbucks = gifts.reduce((s, t) => s + (t.finalPrice || 0), 0);
+  const uniqueReceivers = new Set(gifts.map(t => t.receiverName)).size;
+  const uniqueSenders = new Set(gifts.map(t => t.senderName).filter(Boolean)).size;
 
   const stats = [
-    { icon: <Package size={18} color="#a78bfa" />, label: "Total regalos", value: transactions.length.toLocaleString(), bg: "rgba(139,92,246,0.1)", border: "rgba(139,92,246,0.2)" },
+    { icon: <Package size={18} color="#a78bfa" />, label: "Total regalos", value: gifts.length.toLocaleString(), bg: "rgba(139,92,246,0.1)", border: "rgba(139,92,246,0.2)" },
     { icon: <TrendingUp size={18} color="#60a5fa" />, label: "V-Bucks gastados", value: totalVbucks.toLocaleString(), bg: "rgba(96,165,250,0.1)", border: "rgba(96,165,250,0.2)" },
     { icon: <Gamepad2 size={18} color="#fbbf24" />, label: "Cuentas usadas", value: uniqueSenders.toLocaleString(), bg: "rgba(251,191,36,0.1)", border: "rgba(251,191,36,0.2)" },
     { icon: <History size={18} color="#34d399" />, label: "Clientes atendidos", value: uniqueReceivers.toLocaleString(), bg: "rgba(52,211,153,0.1)", border: "rgba(52,211,153,0.2)" },

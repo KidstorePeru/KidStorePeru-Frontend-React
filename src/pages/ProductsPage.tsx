@@ -6,12 +6,13 @@ import AccountCard from "../components/products/AccountCard";
 import GiftModal from "../components/products/GiftModal";
 import GiftSuccessModal from "../components/products/GiftSuccessModal";
 import PavosModal from "../components/products/PavosModal";
-import { Account, rawAccount, rawAccountResponse } from "../components/accounts";
+import { Account, mapAccount, rawAccountResponse } from "../components/accounts";
 import { Friend } from "../components/products/GiftModal";
 import MainContent from "../components/navigation/MainContent";
 import { Search } from "lucide-react";
 import { motion } from "framer-motion";
 import usePageTitle from "../hooks/usePageTitle";
+import useShopCountdown from "../hooks/useShopCountdown";
 
 export type RawEntry = any;
 
@@ -27,6 +28,10 @@ export interface ShopEntry {
 
 const AUTO_REFRESH_INTERVAL = 60 * 1000; // 60 segundos
 const SHOP_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 min — cubre la rotación diaria de la tienda
+
+// Isolated so the once-a-second tick re-renders only these few characters and
+// not the whole page (150+ item cards).
+const ShopCountdown: React.FC = () => <>{useShopCountdown()}</>;
 
 const ProductsPage: React.FC = () => {
   usePageTitle("Regalos");
@@ -44,28 +49,18 @@ const ProductsPage: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [lastGiftResponse, setLastGiftResponse] = useState<any>(null);
-  const [countdown, setCountdown] = useState("");
+  const [shopError, setShopError] = useState(false);
+  const [pickAccountHint, setPickAccountHint] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
-
-  // Cuenta regresiva UTC tienda
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      const next = new Date(); next.setUTCHours(24, 0, 0, 0);
-      const diff = next.getTime() - now.getTime();
-      const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
-      const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
-      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
-      setCountdown(`${h}:${m}:${s}`);
-    };
-    tick(); const iv = setInterval(tick, 1000); return () => clearInterval(iv);
-  }, []);
 
   const fetchShop = useCallback(async () => {
     try {
       const res = await fetch("https://fortnite-api.com/v2/shop?language=es-419");
+      if (!res.ok) throw new Error(`shop HTTP ${res.status}`);
       const json = await res.json();
-      const entries = json.data?.entries || [];
+      const entries = json.data?.entries;
+      // Never replace a good shop with an empty/garbled one.
+      if (!Array.isArray(entries) || entries.length === 0) throw new Error("shop response without entries");
       const map: Record<string, ShopEntry[]> = {};
       entries.forEach((entry: any) => {
         if (entry.giftable === false) return;
@@ -89,8 +84,11 @@ const ProductsPage: React.FC = () => {
         if (!map[category]) map[category] = [];
         map[category].push(displayItem);
       });
-      setItemsByCategory(map); setLoading(false);
-    } catch (err) { console.error(err); setLoading(false); }
+      setItemsByCategory(map); setShopError(false); setLoading(false);
+    } catch (err) {
+      console.error(err);
+      setShopError(true); setLoading(false); // keeps whatever shop was already loaded
+    }
   }, []);
 
   const fetchAccounts = useCallback(async () => {
@@ -98,11 +96,7 @@ const ProductsPage: React.FC = () => {
       const res = await api.get("/fortniteaccountsofuser");
       const data: rawAccountResponse = res.data;
       if (data.success && data.gameAccounts.length !== 0) {
-        const parsed: Account[] = res.data.gameAccounts.map((acc: rawAccount) => ({
-          id: acc.id, displayName: acc.displayName,
-          pavos: acc.pavos ?? 0, remainingGifts: acc.remainingGifts ?? 0,
-          giftSlotStatus: acc.giftSlotStatus,
-        })).sort((a: Account, b: Account) => {
+        const parsed: Account[] = data.gameAccounts.map(mapAccount).sort((a: Account, b: Account) => {
           // Cuentas con slots disponibles primero, ordenadas de mayor a menor slots
           const aRemaining = a.giftSlotStatus?.remaining_gifts ?? a.remainingGifts ?? 0;
           const bRemaining = b.giftSlotStatus?.remaining_gifts ?? b.remainingGifts ?? 0;
@@ -136,6 +130,15 @@ const ProductsPage: React.FC = () => {
     const shopIv = setInterval(fetchShop, SHOP_REFRESH_INTERVAL);
     return () => { clearInterval(accountsIv); clearInterval(shopIv); };
   }, [fetchShop, fetchAccounts]);
+
+  const handleItemClick = useCallback((item: ShopEntry) => {
+    if (!selectedAccount) {
+      setPickAccountHint(true);
+      setTimeout(() => setPickAccountHint(false), 4000);
+      return;
+    }
+    setSelectedItem(item); setShowGiftModal(true);
+  }, [selectedAccount]);
 
   const sendGift = async (recipient: Friend) => {
     if (!selectedItem || !selectedAccount) return;
@@ -225,6 +228,11 @@ const ProductsPage: React.FC = () => {
                 {lastGiftResponse.details}
               </p>
             )}
+            {lastGiftResponse?.needs_relink && (
+              <a href="/fortniteaccounts" style={{ display: "block", marginBottom: "16px", fontSize: "12px", color: "var(--accent)", textDecoration: "underline" }}>
+                Ir a Cuentas Fortnite para volver a vincularla
+              </a>
+            )}
             <button onClick={() => setShowErrorModal(false)}
               style={{ padding: "9px 20px", borderRadius: "9px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", fontSize: "13px", cursor: "pointer", fontFamily: "'Manrope',sans-serif" }}>
               Cerrar
@@ -296,7 +304,7 @@ const ProductsPage: React.FC = () => {
             <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: "var(--success)", animation: "pulse 2s infinite" }} />
             <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
               Nuevos artículos en{" "}
-              <span style={{ color: "var(--accent)", fontWeight: 700, fontFamily: "monospace" }}>{countdown}</span>
+              <span style={{ color: "var(--accent)", fontWeight: 700, fontFamily: "monospace" }}><ShopCountdown /></span>
               {" "}UTC
             </span>
           </div>
@@ -313,6 +321,24 @@ const ProductsPage: React.FC = () => {
             onBlur={e => (e.target.style.borderColor = "var(--border)")} />
         </div>
 
+        {pickAccountHint && (
+          <p style={{ textAlign: "center", color: "var(--warning)", fontSize: "13px", marginTop: "-12px", marginBottom: "16px" }}>
+            Primero selecciona una cuenta arriba para poder enviar un regalo.
+          </p>
+        )}
+
+        {shopError && (
+          <div style={{ textAlign: "center", margin: "0 auto 20px", maxWidth: "420px", padding: "12px 16px", borderRadius: "12px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)" }}>
+            <p style={{ color: "var(--danger)", fontSize: "13px", margin: "0 0 8px" }}>
+              {Object.keys(itemsByCategory).length ? "No se pudo actualizar la tienda; se muestra la última cargada." : "No se pudo cargar la tienda de Fortnite."}
+            </p>
+            <button onClick={() => { setLoading(true); fetchShop(); }}
+              style={{ padding: "7px 16px", borderRadius: "9px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", fontSize: "12px", cursor: "pointer", fontFamily: "'Manrope',sans-serif" }}>
+              Reintentar
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "14px" }}>Cargando tienda...</p>
         ) : (
@@ -326,10 +352,7 @@ const ProductsPage: React.FC = () => {
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: "12px" }}>
                   {filtered.map((item, idx) => (
-                    <ItemCard key={idx} item={item} onClick={item => {
-                      if (!selectedAccount) return;
-                      setSelectedItem(item); setShowGiftModal(true);
-                    }} />
+                    <ItemCard key={`${item.offerId}-${idx}`} item={item} onClick={handleItemClick} />
                   ))}
                 </div>
               </div>

@@ -4,10 +4,7 @@ import { GiftSlotStatus } from "../accounts/types";
 interface Props {
   giftSlotStatus?: GiftSlotStatus;
   remainingGiftsOverride?: number;
-  accountId?: string;
 }
-
-export const saveManualGiftAdjust = (_accountId: string) => {};
 
 const formatDiff = (diff: number): string => {
   if (diff <= 0) return "";

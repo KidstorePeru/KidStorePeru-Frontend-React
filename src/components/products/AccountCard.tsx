@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import axios from "axios";
 import { RefreshCw, Plus } from "lucide-react";
 import { Account } from "../accounts";
 import api from "../../lib/api";
+import { isFresh, timeAgo } from "../../lib/format";
 import GiftSlotStatusInline from "./GiftSlotStatusInline";
 
 interface AccountCardProps {
@@ -17,17 +19,27 @@ const AccountCard: React.FC<AccountCardProps> = ({
   account, selected, onClick, onRefresh, handleAddPavos, showGiftStatus = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
 
   const handleRefresh = async (e: React.MouseEvent) => {
-    e.stopPropagation(); setIsLoading(true);
+    e.stopPropagation(); setIsLoading(true); setRefreshError("");
     try {
       await api.post("/refreshpavos", { account_id: account.id });
       onRefresh?.();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      const d = axios.isAxiosError(err) ? err.response?.data : null;
+      setRefreshError(d?.needs_relink ? "Vuelve a vincular esta cuenta" : "No se pudo leer de Epic");
+      setTimeout(() => setRefreshError(""), 6000);
+    }
     finally { setIsLoading(false); }
   };
 
   const hasPavos = account.pavos && account.pavos > 0;
+  const fresh = isFresh(account.pavosSyncedAt);
+  const syncLabel = account.pavosSyncedAt
+    ? `Pavos leídos de Epic ${timeAgo(account.pavosSyncedAt)}`
+    : "Todavía no se leyeron los pavos desde Epic";
 
   return (
     <div
@@ -68,7 +80,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
         <button
           onClick={handleRefresh} disabled={isLoading}
           style={{ width: "24px", height: "24px", borderRadius: "50%", border: "1px solid var(--border)", background: "var(--bg-card)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: isLoading ? 0.4 : 1 }}
-          title="Actualizar pavos"
+          title="Leer pavos y regalos desde Epic ahora"
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card-hover)"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"}
         >
@@ -81,19 +93,22 @@ const AccountCard: React.FC<AccountCardProps> = ({
           {account.displayName}
         </h3>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: refreshError ? "2px" : "10px" }} title={syncLabel}>
           <span style={{ fontSize: "13px" }}>🪙</span>
           <span style={{ fontSize: "14px", fontWeight: 700, color: hasPavos ? "var(--gold)" : "var(--text-muted)" }}>
             {account.pavos?.toLocaleString() ?? "0"}
           </span>
           <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>pavos</span>
+          <span aria-label={fresh ? "Pavos al día" : "Pavos sin confirmar con Epic"}
+            style={{ width: "6px", height: "6px", borderRadius: "50%", marginLeft: "2px",
+              background: fresh ? "var(--success)" : "var(--warning)" }} />
         </div>
+        {refreshError && (
+          <p style={{ fontSize: "10px", color: "var(--danger)", margin: "0 0 8px" }}>{refreshError}</p>
+        )}
 
         {showGiftStatus ? (
-          <GiftSlotStatusInline
-            giftSlotStatus={account.giftSlotStatus}
-            accountId={account.id}  // ← clave: pasar el id para localStorage
-          />
+          <GiftSlotStatusInline giftSlotStatus={account.giftSlotStatus} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>

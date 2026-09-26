@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import api from "../lib/api";
+import { isWebGift } from "../components/orders/types";
 import MainContent from "../components/navigation/MainContent";
 import { Link } from "react-router-dom";
 import {
@@ -16,7 +17,7 @@ const ff = "'Manrope', sans-serif";
 interface SessionPayload { admin?: boolean; exp: number; user_id: string; username: string; }
 interface Account { id:string; displayName:string; pavos:number; remainingGifts:number; }
 interface Transaction {
-  ID:string; SenderName:string; ReceiverName:string;
+  ID:string; ObjectStoreID:string; SenderName:string; ReceiverName:string;
   ObjectStoreName:string; FinalPrice:number; GiftImage:string; CreatedAt:string;
 }
 
@@ -96,7 +97,9 @@ const DashboardPage: React.FC = () => {
         api.get(`/${isAdmin ? "alltransactions" : "transactions"}`),
       ]);
       setAccounts(accRes.data.gameAccounts || []);
-      setTxs(txRes.data.transactions || []);
+      // Sales statistics only include gifts sent from this web (not manual slot
+      // adjustments nor gifts read from Epic's history).
+      setTxs(((txRes.data.transactions || []) as Transaction[]).filter(t => isWebGift(t.ObjectStoreID)));
       setLastUpdated(new Date());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }

@@ -189,7 +189,7 @@ const GiftSuccessModal: React.FC<Props> = ({ giftInfo, sentAt, onClose }) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url; a.download = `regalo-${giftInfo.receiverName}-${transactionId}.png`;
-        a.click(); URL.revokeObjectURL(url);
+        a.click(); setTimeout(() => URL.revokeObjectURL(url), 10000);
         setCopied(true); setTimeout(() => setCopied(false), 3000);
       }
     } catch (err) { console.error("Error:", err); }

@@ -1,3 +1,4 @@
+import FriendsBadge from "./FriendsBadge";
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Gamepad2 } from "lucide-react";
@@ -151,7 +152,8 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
               </div>
 
               {/* Pavos */}
-              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}
                 title={acc.pavosSyncedAt ? `Pavos leídos de Epic ${timeAgo(acc.pavosSyncedAt)}` : "Todavía no se leyeron los pavos desde Epic"}>
                 <span style={{ fontSize: "14px" }}>🪙</span>
                 <span style={{ fontSize: "13px", fontWeight: 600, color: "#fbbf24" }}>
@@ -159,6 +161,8 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
                 </span>
                 <span style={{ width: "6px", height: "6px", borderRadius: "50%",
                   background: isFresh(acc.pavosSyncedAt) ? "var(--success)" : "var(--warning)" }} />
+                </div>
+                <FriendsBadge account={acc} compact />
               </div>
 
               {/* Estado regalos */}

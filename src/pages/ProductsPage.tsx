@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import api from "../lib/api";
 import ItemCard from "../components/products/ItemCard";
@@ -27,6 +27,7 @@ export interface ShopEntry {
 }
 
 const AUTO_REFRESH_INTERVAL = 60 * 1000; // 60 segundos
+const LIVE_SYNC_MIN_AGE = 60 * 1000; // no re-leer de Epic una cuenta leída hace menos de 1 min
 const SHOP_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 min — cubre la rotación diaria de la tienda
 
 // Isolated so the once-a-second tick re-renders only these few characters and
@@ -130,6 +131,45 @@ const ProductsPage: React.FC = () => {
     const shopIv = setInterval(fetchShop, SHOP_REFRESH_INTERVAL);
     return () => { clearInterval(accountsIv); clearInterval(shopIv); };
   }, [fetchShop, fetchAccounts]);
+
+  // Keep the real pavos / gift slots live: while this page is open and visible,
+  // ask the backend to re-read every account from Epic (one at a time, spaced
+  // out) when its last sync is older than a minute. Accounts Epic rejected
+  // (need re-linking) are skipped for 10 min so they don't retry forever.
+  const accountsRef = useRef<Account[]>([]);
+  accountsRef.current = accounts;
+  const relinkSkipUntil = useRef<Map<string, number>>(new Map());
+  const liveSyncRunning = useRef(false);
+
+  const liveSync = useCallback(async () => {
+    if (liveSyncRunning.current || document.visibilityState !== "visible") return;
+    liveSyncRunning.current = true;
+    try {
+      let touched = false;
+      for (const acc of accountsRef.current) {
+        const skip = relinkSkipUntil.current.get(acc.id) ?? 0;
+        if (skip > Date.now()) continue;
+        const last = acc.pavosSyncedAt ? new Date(acc.pavosSyncedAt).getTime() : 0;
+        if (Date.now() - last < LIVE_SYNC_MIN_AGE) continue;
+        try {
+          await api.post("/refreshpavos", { account_id: acc.id });
+          touched = true;
+        } catch (err: any) {
+          if (err?.response?.data?.needs_relink) relinkSkipUntil.current.set(acc.id, Date.now() + 10 * 60 * 1000);
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      if (touched) await fetchAccounts();
+    } finally { liveSyncRunning.current = false; }
+  }, [fetchAccounts]);
+
+  useEffect(() => {
+    if (accounts.length === 0) return;
+    const first = setTimeout(liveSync, 1500);
+    const iv = setInterval(liveSync, AUTO_REFRESH_INTERVAL);
+    return () => { clearTimeout(first); clearInterval(iv); };
+    // re-arm only when the set of accounts changes, not on every poll
+  }, [accounts.length, liveSync]);
 
   const handleItemClick = useCallback((item: ShopEntry) => {
     if (!selectedAccount) {

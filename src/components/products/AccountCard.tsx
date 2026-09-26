@@ -4,6 +4,7 @@ import { RefreshCw, Plus } from "lucide-react";
 import { Account } from "../accounts";
 import api from "../../lib/api";
 import { isFresh, timeAgo } from "../../lib/format";
+import FriendsBadge from "../accounts/FriendsBadge";
 import GiftSlotStatusInline from "./GiftSlotStatusInline";
 
 interface AccountCardProps {
@@ -93,7 +94,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           {account.displayName}
         </h3>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: refreshError ? "2px" : "10px" }} title={syncLabel}>
+        <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "4px" }} title={syncLabel}>
           <span style={{ fontSize: "13px" }}>🪙</span>
           <span style={{ fontSize: "14px", fontWeight: 700, color: hasPavos ? "var(--gold)" : "var(--text-muted)" }}>
             {account.pavos?.toLocaleString() ?? "0"}
@@ -103,6 +104,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
             style={{ width: "6px", height: "6px", borderRadius: "50%", marginLeft: "2px",
               background: fresh ? "var(--success)" : "var(--warning)" }} />
         </div>
+        <div style={{ marginBottom: refreshError ? "2px" : "8px" }}><FriendsBadge account={account} compact /></div>
         {refreshError && (
           <p style={{ fontSize: "10px", color: "var(--danger)", margin: "0 0 8px" }}>{refreshError}</p>
         )}

@@ -15,6 +15,10 @@ export type Account = {
     giftSlotStatus?: GiftSlotStatus;
     /** When the pavos were last read from Epic (ISO). Absent if never synced. */
     pavosSyncedAt?: string | null;
+    /** Friend-list state (count absent if not read yet). */
+    friendsCount?: number | null;
+    friendsMax?: number;
+    friendsFull?: boolean;
 };
 
 export type rawAccount = {
@@ -24,6 +28,9 @@ export type rawAccount = {
     remainingGifts: number;
     giftSlotStatus?: GiftSlotStatus;
     pavosSyncedAt?: string | null;
+    friendsCount?: number | null;
+    friendsMax?: number;
+    friendsFull?: boolean;
 };
 
 export type rawAccountResponse = {
@@ -39,4 +46,7 @@ export const mapAccount = (acc: rawAccount): Account => ({
     remainingGifts: acc.remainingGifts ?? 0,
     giftSlotStatus: acc.giftSlotStatus,
     pavosSyncedAt: acc.pavosSyncedAt ?? null,
+    friendsCount: acc.friendsCount ?? null,
+    friendsMax: acc.friendsMax ?? 0,
+    friendsFull: acc.friendsFull ?? false,
 });

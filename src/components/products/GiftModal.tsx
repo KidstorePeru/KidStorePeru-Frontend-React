@@ -18,6 +18,7 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
   const [searchResult, setSearchResult] = useState<Friend|null>(null);
   const [searchStatus, setSearchStatus] = useState<"none"|"loading"|"error"|"success">("none");
   const [errorMessage, setErrorMessage] = useState("");
+  const [needsRelink, setNeedsRelink] = useState(false);
   const [copied, setCopied] = useState(false);
 
   if (!selectedItem || !selectedAccount) {
@@ -34,15 +35,13 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
   }
 
   const handleSearch = async () => {
-    setSearchStatus("loading"); setErrorMessage("");
+    setSearchStatus("loading"); setErrorMessage(""); setNeedsRelink(false);
     try {
       const res = await api.post("/searchfortnitefriend",
         { display_name:searchName, account_id:selectedAccount.id }
       );
       const data = res.data;
       if (data.error) {
-        // A dead account token means the account needs re-linking.
-        if (/token|refresh/i.test(String(data.error))) { onClose(); window.location.href = "/fortniteaccounts"; return; }
         setSearchStatus("error"); setSearchResult(null); setErrorMessage(data.error); return;
       }
       const friend: Friend = { id:data.accountId, username:data.displayName, isGiftable:data.giftable };
@@ -50,8 +49,15 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
       if (data.giftable) { setSearchStatus("success"); }
       else { setSearchStatus("error"); setErrorMessage(data.error||"No puede recibir regalos."); }
     } catch(e:any) {
+      const d = e?.response?.data;
       setSearchStatus("error"); setSearchResult(null);
-      setErrorMessage(e?.response?.data?.error||"Error al buscar.");
+      if (d?.needs_relink) {
+        // Epic rejected this account's credentials: it has to be linked again.
+        setNeedsRelink(true);
+        setErrorMessage("Epic rechazó las credenciales de esta cuenta. Vuelve a vincularla desde \"Cuentas Fortnite\".");
+      } else {
+        setErrorMessage([d?.error || "Error al buscar.", d?.details].filter(Boolean).join(" — "));
+      }
     }
   };
 
@@ -169,6 +175,12 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
             </motion.div>
           )}
         </AnimatePresence>
+        {needsRelink && (
+          <a href="/fortniteaccounts" style={{ display:"block", textAlign:"center", marginBottom:"10px",
+            fontSize:"12px", color:"var(--accent)", textDecoration:"underline" }}>
+            Ir a Cuentas Fortnite
+          </a>
+        )}
 
         <button onClick={handleSend} disabled={searchStatus!=="success"||!!noSlots}
           style={{ width:"100%",padding:"12px",borderRadius:"10px",border:"1px solid",

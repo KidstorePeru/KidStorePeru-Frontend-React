@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 import api from "../../lib/api";
 import { X, Link, CheckCircle, AlertCircle, ExternalLink, Copy, Check } from "lucide-react";
 
@@ -16,9 +17,14 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
   const [userCode, setUserCode] = useState<string>("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [copied, setCopied] = useState(false);
+  const [message, setMessage] = useState("");
+  const [linkedPavos, setLinkedPavos] = useState<number | null>(null);
+
+  const apiMessage = (err: unknown, fallback: string) =>
+    (axios.isAxiosError(err) && (err.response?.data?.error as string | undefined)) || fallback;
 
   const handleInit = async () => {
-    setStatus("loading");
+    setStatus("loading"); setMessage("");
     try {
       const res = await api.post("/connectfaccount", {});
 
@@ -33,24 +39,31 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
       }
     } catch (err) {
       console.error("Init failed:", err);
+      setMessage(apiMessage(err, "No se pudo iniciar la vinculación. Inténtalo de nuevo."));
       setStatus("error");
     }
   };
 
   const handleDeviceSync = async () => {
     if (!deviceCode) return;
-    setStatus("loading");
+    setStatus("loading"); setMessage("");
     try {
       const res = await api.post("/finishconnectfaccount", { device_code: deviceCode });
 
       if (res.status === 200) {
         setStatus("success");
-        setTimeout(() => { onSuccess(); onClose(); }, 1200);
+        if (res.data.pavos_synced) {
+          setLinkedPavos(Number(res.data.pavos));
+        } else {
+          setMessage("Cuenta vinculada. Los pavos se leerán desde Epic en unos minutos (puedes sincronizarlos desde el botón + de la cuenta).");
+        }
+        setTimeout(() => { onSuccess(); onClose(); }, 2600);
       } else {
         setStatus("error");
       }
     } catch (err) {
       console.error("Device sync failed:", err);
+      setMessage(apiMessage(err, "No se pudo completar la vinculación."));
       setStatus("error");
     }
   };
@@ -171,6 +184,9 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                   <><ExternalLink size={15} /> Iniciar vinculación</>
                 )}
               </button>
+              {step === 1 && message && (
+                <p style={{ fontSize: "12px", marginTop: "10px", textAlign: "center", lineHeight: 1.4, color: "var(--danger)" }}>{message}</p>
+              )}
 
               <button onClick={onClose} style={{ width: "100%", padding: "10px", marginTop: "8px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "13px", cursor: "pointer", fontFamily: ff }}>
                 Cancelar
@@ -241,10 +257,15 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                 }}
               >
                 {status === "loading" ? "Verificando..." :
-                 status === "success" ? <><CheckCircle size={15} /> ¡Cuenta vinculada!</> :
+                 status === "success" ? <><CheckCircle size={15} /> ¡Cuenta vinculada!{linkedPavos !== null && ` · ${linkedPavos.toLocaleString()} pavos`}</> :
                  status === "error" ? <><AlertCircle size={15} /> Error — reintentar</> :
                  <><CheckCircle size={15} /> Ya inicié sesión</>}
               </button>
+
+              {message && (
+                <p style={{ fontSize: "12px", marginTop: "10px", textAlign: "center", lineHeight: 1.4,
+                  color: status === "error" ? "var(--danger)" : "var(--text-secondary)" }}>{message}</p>
+              )}
 
               <button onClick={onClose} style={{ width: "100%", padding: "10px", marginTop: "8px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "13px", cursor: "pointer", fontFamily: ff }}>
                 Cancelar

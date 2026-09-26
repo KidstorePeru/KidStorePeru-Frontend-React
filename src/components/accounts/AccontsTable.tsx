@@ -4,6 +4,7 @@ import { Search, Trash2, Gamepad2 } from "lucide-react";
 import ConfirmModal from "../common/ConfirmModal";
 import { Account } from "./types";
 import GiftSlotStatusInline from "../products/GiftSlotStatusInline";
+import { isFresh, timeAgo } from "../../lib/format";
 
 interface Props {
   accounts: Account[];
@@ -150,11 +151,14 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
               </div>
 
               {/* Pavos */}
-              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}
+                title={acc.pavosSyncedAt ? `Pavos leídos de Epic ${timeAgo(acc.pavosSyncedAt)}` : "Todavía no se leyeron los pavos desde Epic"}>
                 <span style={{ fontSize: "14px" }}>🪙</span>
                 <span style={{ fontSize: "13px", fontWeight: 600, color: "#fbbf24" }}>
                   {(acc.pavos ?? 0).toLocaleString()}
                 </span>
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%",
+                  background: isFresh(acc.pavosSyncedAt) ? "var(--success)" : "var(--warning)" }} />
               </div>
 
               {/* Estado regalos */}
@@ -163,7 +167,6 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
                   <GiftSlotStatusInline
                     giftSlotStatus={acc.giftSlotStatus}
                     remainingGiftsOverride={acc.remainingGifts}
-                    accountId={acc.id}
                   />
                 </div>
               ) : (

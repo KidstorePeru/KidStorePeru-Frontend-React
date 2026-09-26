@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../lib/api";
 import AccountsTable from "../components/accounts/AccontsTable";
 import AddAccountModal from "../components/accounts/AddAccountModal";
-import { Account, rawAccount } from "../components/accounts";
+import { Account, mapAccount } from "../components/accounts";
 import MainContent from "../components/navigation/MainContent";
 import { Gamepad2, Plus } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
@@ -19,11 +19,7 @@ const FortniteAccountsPage = () => {
     try {
       const res = await api.get("/fortniteaccountsofuser");
       if (res.data?.success && res.data.gameAccounts?.length) {
-        setAccounts(res.data.gameAccounts.map((acc: rawAccount) => ({
-          id: acc.id, displayName: acc.displayName,
-          pavos: acc.pavos ?? 0, remainingGifts: acc.remainingGifts ?? 0,
-          giftSlotStatus: acc.giftSlotStatus,
-        })));
+        setAccounts(res.data.gameAccounts.map(mapAccount));
       } else {
         setAccounts([]);
       }

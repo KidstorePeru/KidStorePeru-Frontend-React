@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { Transaction } from "./types";
+import { Transaction, transactionKind } from "./types";
 
 interface Props {
   transactions: Transaction[];
@@ -41,7 +41,6 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
 
   const resetPage = () => setPage(1);
 
-  const isManual = (tx: Transaction) => tx.objectStoreID === "manual-adjustment";
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -154,7 +153,8 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
         paginated.map((tx, i) => {
           const { date, time } = formatDate(tx.createdAt);
           const priceColor = getPriceColor(tx.finalPrice);
-          const manual = isManual(tx);
+          const kind = transactionKind(tx.objectStoreID);
+          const manual = kind !== "gift";
           return (
             <motion.div
               key={tx.id}
@@ -179,7 +179,7 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
                     style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                 ) : (
                   <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>
-                    {manual ? "⚙️" : "🎁"}
+                    {kind === "manual" ? "⚙️" : kind === "game" ? "🎮" : "🎁"}
                   </div>
                 )}
               </div>
@@ -190,7 +190,7 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
                   fontSize: "12px", fontWeight: 600, color: "var(--text-primary)",
                   margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>
-                  {manual ? "Ajuste manual" : tx.objectStoreName}
+                  {kind === "manual" ? "Ajuste manual" : kind === "game" ? "Regalo enviado desde el juego" : tx.objectStoreName}
                 </p>
                 <p style={{ fontSize: "10px", color: "var(--text-muted)", margin: 0, fontFamily: "monospace" }}>
                   {tx.id.slice(0, 8)}…
@@ -218,7 +218,7 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
                   fontSize: "12px", color: "#c084fc", fontWeight: 600,
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block",
                 }}>
-                  {tx.receiverName || "—"}
+                  {tx.receiverName || (kind === "game" ? "Jugador de Epic" : "—")}
                 </span>
               </div>
 

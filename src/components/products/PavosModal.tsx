@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../lib/api";
 import { Account } from "../accounts";
-import { X, Plus, Edit2, ChevronRight, Check } from "lucide-react";
-import { saveManualGiftAdjust } from "./GiftSlotStatusInline";
+import { X, Plus, Edit2, ChevronRight, Check, RefreshCw } from "lucide-react";
+import { timeAgo } from "../../lib/format";
 
 interface PavosModalProps {
   account: Account;
@@ -35,6 +35,9 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
   const [giftSuccess, setGiftSuccess] = useState("");
   const [giftError, setGiftError] = useState("");
   const [localGifts, setLocalGifts] = useState<number | null>(null);
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const ff = "'Manrope', sans-serif";
   const currentGifts = localGifts !== null ? localGifts : (account.remainingGifts ?? 5);
@@ -72,6 +75,30 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
     }
   };
 
+  // Reads the real pavos (and gifts sent) from Epic and stores them.
+  const handleSyncEpic = async () => {
+    setSyncing(true); setSyncMsg(null);
+    try {
+      const res = await api.post("/refreshpavos", { account_id: account.id });
+      const d = res.data?.data;
+      if (res.data?.success && d) {
+        onPavosUpdated?.({
+          account_id: account.id, display_name: account.displayName,
+          previous_pavos: account.pavos, new_pavos: d.pavos, operation: "override", amount: d.pavos,
+        });
+        onRefresh?.();
+        setSyncMsg({ ok: true, text: `Pavos actualizados desde Epic: ${Number(d.pavos).toLocaleString()}` });
+      } else {
+        setSyncMsg({ ok: false, text: res.data?.error || "No se pudo leer desde Epic" });
+      }
+    } catch (e: any) {
+      const d = e?.response?.data;
+      setSyncMsg({ ok: false, text: d?.needs_relink
+        ? "Epic rechazó las credenciales de esta cuenta: vuelve a vincularla."
+        : (d?.details || d?.error || "No se pudo conectar con Epic") });
+    } finally { setSyncing(false); }
+  };
+
   const handleGiftAdjust = async () => {
     const amt = parseInt(giftAmount);
     if (!amt || amt <= 0) return;
@@ -85,11 +112,6 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
         const newVal = res.data.new_remaining;
         setGiftSuccess(`Actualizado: ${res.data.previous_remaining} → ${newVal} intentos`);
         setLocalGifts(newVal);
-        // Guardar en localStorage para mostrar timer de 24h
-        // Solo si se restaron intentos (no si se agregaron o fijaron a max)
-        if (giftOp === "subtract" || (giftOp === "override" && newVal < 5)) {
-          saveManualGiftAdjust(account.id);
-        }
         onRefresh?.();
       } else {
         setGiftError(res.data.error || "Error al actualizar");
@@ -152,7 +174,26 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
               <span style={{ color: step === "menu" ? "var(--accent)" : "var(--text-muted)", cursor: "pointer" }} onClick={() => setStep("menu")}>Inicio</span>
               {step !== "menu" && <><ChevronRight size={12} color="var(--text-muted)" /><span style={{ color: "var(--accent)" }}>{step === "confirm" ? "Confirmar" : step === "edit" ? "Editar total" : "Cantidad"}</span></>}
             </div>
-            <p style={{ ...sectionLbl, marginBottom: "12px" }}>Pavos actuales: <span style={{ color: "var(--gold)", fontWeight: 700 }}>{account.pavos.toLocaleString()}</span></p>
+            <p style={{ ...sectionLbl, marginBottom: "8px" }}>Pavos actuales: <span style={{ color: "var(--gold)", fontWeight: 700 }}>{account.pavos.toLocaleString()}</span></p>
+            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "12px", padding: "10px 12px", marginBottom: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                  {account.pavosSyncedAt ? `Leído de Epic ${timeAgo(account.pavosSyncedAt)}` : "Aún sin leer desde Epic"}
+                </span>
+                <button onClick={handleSyncEpic} disabled={syncing}
+                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px", borderRadius: "8px", background: "var(--accent-bg)", border: "1px solid var(--accent-border)", color: "var(--accent)", fontSize: "11px", fontWeight: 700, cursor: syncing ? "wait" : "pointer", fontFamily: ff, opacity: syncing ? 0.6 : 1 }}>
+                  <RefreshCw size={11} className={syncing ? "animate-spin" : ""} /> {syncing ? "Leyendo..." : "Sincronizar con Epic"}
+                </button>
+              </div>
+              <p style={{ fontSize: "10px", color: "var(--text-muted)", margin: "6px 0 0", lineHeight: 1.4 }}>
+                Los pavos se leen de Epic automáticamente cada ~30 min. Un ajuste manual sirve mientras tanto, pero la próxima lectura lo reemplaza por el saldo real.
+              </p>
+              {syncMsg && (
+                <p style={{ fontSize: "11px", margin: "6px 0 0", color: syncMsg.ok ? "var(--success)" : "var(--danger)" }}>
+                  {syncMsg.ok ? "✓ " : "✗ "}{syncMsg.text}
+                </p>
+              )}
+            </div>
 
             <AnimatePresence mode="wait">
               {step === "menu" && (

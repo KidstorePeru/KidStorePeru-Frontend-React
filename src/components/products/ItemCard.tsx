@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { ShopEntry } from "../../pages/ProductsPage";
+import useShopCountdown from "../../hooks/useShopCountdown";
 
 // Gradientes de fallback por rareza
 const rarityGradients: Record<string, [string, string]> = {
@@ -26,6 +27,13 @@ const getGradient = (rarity: string): [string, string] => {
     || rarityGradients.common;
 };
 
+// Only this tiny component re-renders every second (the cards themselves are
+// memoized), and all cards share a single ticker.
+const CardTimer: React.FC = () => {
+  const [h, m, s] = useShopCountdown().split(":");
+  return <>⏱{h}h {m}m {s}s</>;
+};
+
 interface Props {
   item: ShopEntry;
   selected?: boolean;
@@ -34,21 +42,6 @@ interface Props {
 
 const ItemCard: React.FC<Props> = ({ item, onClick }) => {
   const d = item.itemDisplay;
-  const [timeLeft, setTimeLeft] = useState("");
-
-  useEffect(() => {
-    const tick = () => {
-      const next = new Date(); next.setUTCHours(24, 0, 0, 0);
-      const diff = next.getTime() - Date.now();
-      const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
-      const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
-      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
-      setTimeLeft(`${h}h ${m}m ${s}s`);
-    };
-    tick();
-    const iv = setInterval(tick, 1000);
-    return () => clearInterval(iv);
-  }, []);
 
   // Los colores vienen de entry.colors con # prefijado desde ProductsPage
   // Ej: color1="#58a7f2ff", color2="#1e62f4ff", textBackgroundColor="#3752cfff"
@@ -170,7 +163,7 @@ const ItemCard: React.FC<Props> = ({ item, onClick }) => {
           fontFamily: "monospace",
           letterSpacing: "0.02em",
         }}>
-          ⏱{timeLeft}
+          <CardTimer />
         </div>
       </div>
 
@@ -238,4 +231,4 @@ const ItemCard: React.FC<Props> = ({ item, onClick }) => {
   );
 };
 
-export default ItemCard;
+export default React.memo(ItemCard);

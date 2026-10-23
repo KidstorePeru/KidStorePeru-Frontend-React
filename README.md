@@ -27,6 +27,21 @@ VITE_API_URL=http://localhost:8080
 
 The committed `.env` already targets the production backend.
 
+## Prices in soles
+
+Every shop item, the gift confirmation, the history and the dashboard show the
+price in soles (S/) next to the V-Bucks price. **Every 100 pavos cost S/ 1.30.**
+The rate lives in one place, [`src/lib/pricing.ts`](src/lib/pricing.ts); to
+change it without editing code set a build variable (Railway → Variables):
+
+```
+VITE_SOLES_PER_100_PAVOS=1.50
+```
+
+Prices are computed in whole céntimos and rounded to the nearest one per gift
+(e.g. 500 pavos → S/ 6.50, 75 pavos → S/ 0.98); totals add the per-gift prices.
+The history shows today's rate for old gifts too (no price is stored per sale).
+
 ## Scripts
 
 | Script | What |
@@ -39,11 +54,12 @@ The committed `.env` already targets the production backend.
 ## Structure
 
 ```
-src/lib/api.ts        shared axios instance: attaches the JWT, logs out on 401
+src/lib/api.ts        shared axios instance: attaches the JWT, logs out on 401, 45 s timeout
+src/lib/pricing.ts    soles price list (S/ 1.30 per 100 pavos)
 src/App.tsx           routing, session check, admin gating
 src/pages/            one file per screen
 src/components/        UI, grouped by feature
-src/hooks/            usePageTitle
+src/hooks/            usePageTitle, usePolling (refresh while the tab is visible), useEscapeKey, useMediaQuery
 src/components/theme/  dark/light via CSS variables + localStorage
 ```
 

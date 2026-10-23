@@ -65,8 +65,8 @@ const App = () => {
     <ThemeProvider>
       <SidebarProvider>
         <div style={{ display:"flex", minHeight:"100vh", background:"var(--bg-base)", color:"var(--text-primary)", fontFamily:"'Manrope',sans-serif", position:"relative" }}>
-          <ThemeToggle />
-          {isAuthenticated && <Sidebar admin={isAdmin} />}
+          {/* With a sidebar the toggle lives in it; floating, it covered page buttons */}
+          {isAuthenticated ? <Sidebar admin={isAdmin} /> : <ThemeToggle />}
           <Routes>
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
             <Route path="/dashboard" element={<ProtectedRoute isAuthenticated={isAuthenticated}><DashboardPage /></ProtectedRoute>} />

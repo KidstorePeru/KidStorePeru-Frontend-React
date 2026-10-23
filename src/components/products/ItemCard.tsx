@@ -1,6 +1,8 @@
 import React from "react";
 import { ShopEntry } from "../../pages/ProductsPage";
 import useShopCountdown from "../../hooks/useShopCountdown";
+import { formatSoles, RATE_LABEL } from "../../lib/pricing";
+import { VBUCK_ICON } from "../../lib/assets";
 
 // Gradientes de fallback por rareza
 const rarityGradients: Record<string, [string, string]> = {
@@ -190,18 +192,29 @@ const ItemCard: React.FC<Props> = ({ item, onClick }) => {
         </p>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
-            <img
-              src="https://fortnite-api.com/images/vbuck.png"
-              alt="V-Bucks"
-              style={{ width: "13px", height: "13px" }}
-            />
-            <span style={{
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px", flexShrink: 0, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <img
+                src={VBUCK_ICON}
+                alt="V-Bucks"
+                style={{ width: "13px", height: "13px" }}
+              />
+              <span style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#7dd3fc",
+              }}>
+                {d.vBucks.toLocaleString()}
+              </span>
+            </div>
+            <span title={RATE_LABEL} style={{
               fontSize: "12px",
-              fontWeight: 700,
-              color: "#7dd3fc",
+              fontWeight: 800,
+              color: "#4ade80",
+              letterSpacing: "0.01em",
+              whiteSpace: "nowrap",
             }}>
-              {d.vBucks.toLocaleString()}
+              {formatSoles(d.vBucks)}
             </span>
           </div>
 

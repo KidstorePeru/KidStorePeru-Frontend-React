@@ -5,6 +5,7 @@ import { Account } from "../accounts";
 import api from "../../lib/api";
 import { isFresh, timeAgo } from "../../lib/format";
 import FriendsBadge from "../accounts/FriendsBadge";
+import DeviceAuthBadge from "../accounts/DeviceAuthBadge";
 import GiftSlotStatusInline from "./GiftSlotStatusInline";
 
 interface AccountCardProps {
@@ -72,7 +73,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
         <button
           onClick={e => { e.stopPropagation(); handleAddPavos?.(); }}
           style={{ width: "24px", height: "24px", borderRadius: "50%", border: "1px solid var(--success-border)", background: "var(--success-bg)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-          title="Gestionar cuenta"
+          title="Gestionar cuenta" aria-label="Gestionar cuenta"
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(34,197,94,0.2)"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--success-bg)"}
         >
@@ -81,7 +82,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
         <button
           onClick={handleRefresh} disabled={isLoading}
           style={{ width: "24px", height: "24px", borderRadius: "50%", border: "1px solid var(--border)", background: "var(--bg-card)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: isLoading ? 0.4 : 1 }}
-          title="Leer pavos y regalos desde Epic ahora"
+          title="Leer pavos y regalos desde Epic ahora" aria-label="Leer pavos y regalos desde Epic ahora"
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card-hover)"}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-card)"}
         >
@@ -104,13 +105,16 @@ const AccountCard: React.FC<AccountCardProps> = ({
             style={{ width: "6px", height: "6px", borderRadius: "50%", marginLeft: "2px",
               background: fresh ? "var(--success)" : "var(--warning)" }} />
         </div>
-        <div style={{ marginBottom: refreshError ? "2px" : "8px" }}><FriendsBadge account={account} compact /></div>
+        <div style={{ marginBottom: refreshError ? "2px" : "8px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 10px" }}>
+          <FriendsBadge account={account} compact />
+          <DeviceAuthBadge deviceAuth={account.deviceAuth} />
+        </div>
         {refreshError && (
           <p style={{ fontSize: "10px", color: "var(--danger)", margin: "0 0 8px" }}>{refreshError}</p>
         )}
 
         {showGiftStatus ? (
-          <GiftSlotStatusInline giftSlotStatus={account.giftSlotStatus} />
+          <GiftSlotStatusInline giftSlotStatus={account.giftSlotStatus} onSlotFreed={onRefresh} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>

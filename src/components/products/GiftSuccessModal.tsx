@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { X, Copy, Check } from "lucide-react";
+import { VBUCK_ICON } from "../../lib/assets";
+import useEscapeKey from "../../hooks/useEscapeKey";
 
 interface GiftInfo {
   giftName: string;
@@ -33,9 +35,10 @@ async function generateCardImage(
   accentColor: string,
 ): Promise<Blob> {
 
+  // The pictures are decoration: if one cannot be loaded the card is still made.
   const [itemImg, vbImg] = await Promise.all([
-    loadImg(giftInfo.giftImage),
-    loadImg("https://fortnite-api.com/images/vbuck.png"),
+    giftInfo.giftImage ? loadImg(giftInfo.giftImage).catch(() => null) : Promise.resolve(null),
+    loadImg(VBUCK_ICON).catch(() => null),
   ]);
 
   // ── Escala 3x para HD real ──
@@ -97,7 +100,7 @@ async function generateCardImage(
   const glow = ctx.createRadialGradient(W / 2, y + IMG_ZONE_H * 0.6, 0, W / 2, y + IMG_ZONE_H * 0.6, 130);
   glow.addColorStop(0, accentColor + "15"); glow.addColorStop(1, "transparent");
   ctx.fillStyle = glow; ctx.fillRect(0, y, W, IMG_ZONE_H);
-  ctx.drawImage(itemImg, (W - ITEM_SIZE) / 2, y + 18, ITEM_SIZE, ITEM_SIZE);
+  if (itemImg) ctx.drawImage(itemImg, (W - ITEM_SIZE) / 2, y + 18, ITEM_SIZE, ITEM_SIZE);
   y += IMG_ZONE_H;
 
   // ── Nombre — ReadexPro 700 ──
@@ -117,7 +120,7 @@ async function generateCardImage(
   ctx.beginPath(); ctx.roundRect(bx, by, pw, bh, 14); ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.lineWidth = 0.5;
   ctx.beginPath(); ctx.roundRect(bx, by, pw, bh, 14); ctx.stroke();
-  ctx.drawImage(vbImg, bx + 12, by + 7, 13, 13);
+  if (vbImg) ctx.drawImage(vbImg, bx + 12, by + 7, 13, 13);
   ctx.fillStyle = "#7dd3fc"; ctx.textAlign = "left";
   ctx.fillText(pl, bx + 30, by + 19);
   y += NAME_ZONE_H;
@@ -169,6 +172,8 @@ async function generateCardImage(
 const GiftSuccessModal: React.FC<Props> = ({ giftInfo, sentAt, onClose }) => {
   const [copied, setCopied] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEscapeKey(onClose);
 
   const sentDate = sentAt ? new Date(sentAt) : new Date();
   const fecha = sentDate.toLocaleDateString("es-PE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -192,7 +197,10 @@ const GiftSuccessModal: React.FC<Props> = ({ giftInfo, sentAt, onClose }) => {
         a.click(); setTimeout(() => URL.revokeObjectURL(url), 10000);
         setCopied(true); setTimeout(() => setCopied(false), 3000);
       }
-    } catch (err) { console.error("Error:", err); }
+    } catch (err) {
+      console.error("Error:", err);
+      setFailed(true); setTimeout(() => setFailed(false), 4000);
+    }
     finally { setCopying(false); }
   };
 
@@ -227,8 +235,12 @@ const GiftSuccessModal: React.FC<Props> = ({ giftInfo, sentAt, onClose }) => {
           </div>
 
           <div style={{ padding: "18px 20px 8px", display: "flex", justifyContent: "center", background: "linear-gradient(180deg,#1c2130,#0d1117)" }}>
-            <img src={giftInfo.giftImage} alt={giftInfo.giftName} crossOrigin="anonymous"
-              style={{ width: "190px", height: "190px", objectFit: "contain", display: "block" }} />
+            {giftInfo.giftImage ? (
+              <img src={giftInfo.giftImage} alt={giftInfo.giftName} crossOrigin="anonymous"
+                style={{ width: "190px", height: "190px", objectFit: "contain", display: "block" }} />
+            ) : (
+              <div style={{ width: "190px", height: "190px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "64px" }}>🎁</div>
+            )}
           </div>
 
           <div style={{ padding: "4px 16px 12px", textAlign: "center" }}>
@@ -236,7 +248,7 @@ const GiftSuccessModal: React.FC<Props> = ({ giftInfo, sentAt, onClose }) => {
               {giftInfo.giftName}
             </p>
             <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 14px", borderRadius: "14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <img src="https://fortnite-api.com/images/vbuck.png" crossOrigin="anonymous" style={{ width: "13px", height: "13px", display: "block" }} alt="vb" />
+              <img src={VBUCK_ICON} crossOrigin="anonymous" style={{ width: "13px", height: "13px", display: "block" }} alt="vb" />
               <span style={{ fontSize: "13px", fontWeight: 700, color: "#7dd3fc" }}>{giftInfo.giftPrice.toLocaleString()} V-Bucks</span>
             </div>
           </div>
@@ -273,7 +285,7 @@ const GiftSuccessModal: React.FC<Props> = ({ giftInfo, sentAt, onClose }) => {
         <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
           <button onClick={handleCopyAsImage} disabled={copying}
             style={{ flex: 1, padding: "11px", borderRadius: "10px", background: copied ? "rgba(34,197,94,0.18)" : "rgba(255,255,255,0.07)", border: `1px solid ${copied ? "rgba(34,197,94,0.45)" : "rgba(255,255,255,0.12)"}`, color: copied ? "#4ade80" : "rgba(255,255,255,0.85)", fontSize: "13px", fontWeight: 600, cursor: copying ? "wait" : "pointer", fontFamily: ff, display: "flex", alignItems: "center", justifyContent: "center", gap: "7px", transition: "all 0.2s", opacity: copying ? 0.5 : 1 }}>
-            {copied ? <><Check size={14} />Copiado</> : copying ? <>Generando imagen HD...</> : <><Copy size={14} />Copiar como imagen</>}
+            {copied ? <><Check size={14} />Copiado</> : copying ? <>Generando imagen HD...</> : failed ? <>No se pudo generar la imagen</> : <><Copy size={14} />Copiar como imagen</>}
           </button>
           <button onClick={onClose} style={{ padding: "11px 20px", borderRadius: "10px", background: "transparent", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.45)", fontSize: "13px", cursor: "pointer", fontFamily: ff }}>
             Cerrar

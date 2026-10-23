@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { GiftSlotStatus } from "../accounts/types";
 
 interface Props {
   giftSlotStatus?: GiftSlotStatus;
   remainingGiftsOverride?: number;
+  /**
+   * Called once for every slot whose timer reaches zero, so the parent can
+   * reload the real state from the server instead of waiting for its next
+   * periodic refresh.
+   */
+  onSlotFreed?: () => void;
 }
 
 const formatDiff = (diff: number): string => {
@@ -14,38 +20,67 @@ const formatDiff = (diff: number): string => {
   return `${String(h).padStart(2,"0")}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
 };
 
-const GiftSlotStatusInline: React.FC<Props> = ({ giftSlotStatus, remainingGiftsOverride }) => {
-  // Forces a re-render every second so the countdown timers stay live.
+/** Wait a moment after a timer ends so the server's clock has certainly passed it too. */
+const FREED_GRACE_MS = 1500;
+
+const GiftSlotStatusInline: React.FC<Props> = ({ giftSlotStatus, remainingGiftsOverride, onSlotFreed }) => {
+  // Forces a re-render every second so the countdown timers stay live, and
+  // notices the slots whose timer just ran out.
   const [, setTick] = useState(0);
+  const notified = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 1000);
+    const iv = setInterval(() => {
+      setTick(t => t + 1);
+      if (!onSlotFreed || !giftSlotStatus?.slot_expiry_times?.length) return;
+      const now = Date.now();
+      let freed = false;
+      for (const iso of giftSlotStatus.slot_expiry_times) {
+        if (new Date(iso).getTime() + FREED_GRACE_MS <= now && !notified.current.has(iso)) {
+          notified.current.add(iso);
+          freed = true;
+        }
+      }
+      if (freed) onSlotFreed();
+    }, 1000);
     return () => clearInterval(iv);
-  }, []);
+  }, [giftSlotStatus, onSlotFreed]);
 
   if (!giftSlotStatus && remainingGiftsOverride === undefined) {
     return <div style={{ color:"var(--text-muted)", fontSize:"11px", textAlign:"center" }}>—</div>;
   }
 
-  const remaining = remainingGiftsOverride !== undefined
-    ? remainingGiftsOverride
-    : (giftSlotStatus?.remaining_gifts ?? 5);
   const maxGifts = giftSlotStatus?.max_gifts ?? 5;
-  const usedGifts = giftSlotStatus?.used_gifts ?? (maxGifts - remaining);
+  const now = Date.now();
+
+  // Expiry time of every used slot, soonest first.
+  let expiries = (giftSlotStatus?.slot_expiry_times ?? [])
+    .map(iso => new Date(iso).getTime())
+    .filter(t => !Number.isNaN(t))
+    .sort((a, b) => a - b);
+  if (!expiries.length && giftSlotStatus?.next_slot_available) {
+    const t = new Date(giftSlotStatus.next_slot_available).getTime();
+    if (!Number.isNaN(t)) expiries = [t];
+  }
+  const running = expiries.filter(t => t > now);
+  // Slots that freed up after this data was loaded: the server's count is
+  // already out of date for them.
+  const expired = expiries.length - running.length;
+
+  const baseRemaining = remainingGiftsOverride !== undefined
+    ? remainingGiftsOverride
+    : (giftSlotStatus?.remaining_gifts ?? maxGifts);
+  const remaining = Math.min(maxGifts, baseRemaining + expired);
+  const usedGifts = maxGifts - remaining;
   const isAvailable = remaining > 0;
 
   // Timers individuales por slot usado
-  const slotTimers: string[] = [];
-  if (giftSlotStatus?.slot_expiry_times?.length) {
-    for (const expiryISO of giftSlotStatus.slot_expiry_times) {
-      const diff = new Date(expiryISO).getTime() - Date.now();
-      if (diff > 0) slotTimers.push(formatDiff(diff));
-    }
-  } else if (giftSlotStatus?.next_slot_available) {
-    const diff = new Date(giftSlotStatus.next_slot_available).getTime() - Date.now();
-    if (diff > 0) slotTimers.push(formatDiff(diff));
-  }
+  const slotTimers = running.map(t => formatDiff(t - now));
 
-  const nextTimer = slotTimers.length > 0 ? slotTimers[0] : "";
+  // With every slot busy, the next one frees when the running timers drop below
+  // the maximum: the oldest one normally, a later one if there are extra rows.
+  const nextTimer = !isAvailable && running.length > 0
+    ? formatDiff(running[Math.max(0, running.length - maxGifts)] - now)
+    : "";
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"5px" }}>

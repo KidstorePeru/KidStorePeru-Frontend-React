@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, X } from "lucide-react";
+import useEscapeKey from "../../hooks/useEscapeKey";
 
 interface Props {
   title: string;
@@ -14,8 +15,10 @@ const ff = "'Manrope', sans-serif";
 
 const ConfirmModal: React.FC<Props> = ({
   title, message, confirmLabel = "Eliminar", onConfirm, onCancel
-}) => (
-  <div style={{
+}) => {
+  useEscapeKey(onCancel);
+  return (
+  <div role="dialog" aria-modal="true" aria-label={title} style={{
     position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
     display: "flex", alignItems: "center", justifyContent: "center",
     zIndex: 100, padding: "16px", backdropFilter: "blur(6px)", fontFamily: ff,
@@ -36,7 +39,7 @@ const ConfirmModal: React.FC<Props> = ({
       }}
     >
       {/* Cerrar */}
-      <button onClick={onCancel} style={{
+      <button onClick={onCancel} aria-label="Cerrar" style={{
         position: "absolute", top: "14px", right: "14px",
         background: "var(--bg-card)", border: "1px solid var(--border)",
         borderRadius: "8px", padding: "4px", cursor: "pointer",
@@ -96,6 +99,7 @@ const ConfirmModal: React.FC<Props> = ({
       </div>
     </motion.div>
   </div>
-);
+  );
+};
 
 export default ConfirmModal;

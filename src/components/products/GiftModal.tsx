@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShopEntry } from "../../pages/ProductsPage";
 import { Account } from "../accounts";
 import api from "../../lib/api";
+import { formatSoles, RATE_LABEL } from "../../lib/pricing";
+import { VBUCK_ICON } from "../../lib/assets";
+import useEscapeKey from "../../hooks/useEscapeKey";
 import GiftSlotStatusInline from "./GiftSlotStatusInline";
 import { Search, X, Send, Copy, Check } from "lucide-react";
 
@@ -20,6 +23,7 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
   const [errorMessage, setErrorMessage] = useState("");
   const [needsRelink, setNeedsRelink] = useState(false);
   const [copied, setCopied] = useState(false);
+  useEscapeKey(onClose);
 
   if (!selectedItem || !selectedAccount) {
     return (
@@ -34,7 +38,15 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
     );
   }
 
+  // Whoever was found belongs to the name that was searched: as soon as the name
+  // is edited that result is void, so a gift can never go to the previous person.
+  const resetSearch = () => {
+    if (searchStatus === "none") return;
+    setSearchStatus("none"); setSearchResult(null); setErrorMessage(""); setNeedsRelink(false);
+  };
+
   const handleSearch = async () => {
+    if (searchStatus === "loading" || !searchName.trim()) return;
     setSearchStatus("loading"); setErrorMessage(""); setNeedsRelink(false);
     try {
       const res = await api.post("/searchfortnitefriend",
@@ -67,12 +79,17 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
   };
 
   const handleCopyImage = async () => {
+    let ok = false;
     try {
       const res = await fetch(selectedItem.itemDisplay.image);
       const blob = await res.blob();
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]:blob })]);
-    } catch { await navigator.clipboard.writeText(selectedItem.itemDisplay.image); }
-    setCopied(true); setTimeout(()=>setCopied(false),2200);
+      ok = true;
+    } catch {
+      // some browsers cannot copy a picture: fall back to its address
+      try { await navigator.clipboard.writeText(selectedItem.itemDisplay.image); ok = true; } catch { /* clipboard blocked */ }
+    }
+    if (ok) { setCopied(true); setTimeout(()=>setCopied(false),2200); }
   };
 
   const noSlots = selectedAccount.giftSlotStatus && selectedAccount.giftSlotStatus.remaining_gifts<=0;
@@ -107,11 +124,13 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
               overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
               {selectedItem.itemDisplay.name}
             </p>
-            <div style={{ display:"flex",alignItems:"center",gap:"5px",marginBottom:"4px" }}>
-              <img src="https://static.wikia.nocookie.net/fortnite/images/e/eb/V-Bucks_-_Icon_-_Fortnite.png"
-                alt="vb" style={{ width:"12px",height:"12px" }}/>
+            <div style={{ display:"flex",alignItems:"center",gap:"6px",marginBottom:"4px",flexWrap:"wrap" }}>
+              <img src={VBUCK_ICON} alt="V-Bucks" style={{ width:"12px",height:"12px" }}/>
               <span style={{ fontSize:"12px",color:"var(--blue-accent)",fontWeight:600 }}>
-                {selectedItem.finalPrice} PAVOS
+                {selectedItem.finalPrice.toLocaleString()} PAVOS
+              </span>
+              <span title={RATE_LABEL} style={{ fontSize:"12px",color:"var(--success)",fontWeight:800 }}>
+                · {formatSoles(selectedItem.finalPrice)}
               </span>
             </div>
             <p style={{ fontSize:"11px",color:"var(--text-muted)",margin:0 }}>
@@ -140,7 +159,7 @@ const GiftModal: React.FC<GiftModalProps> = ({ onClose, selectedItem, selectedAc
           <div style={{ position:"relative",flex:1 }}>
             <Search size={13} color="var(--text-muted)"
               style={{ position:"absolute",left:"11px",top:"50%",transform:"translateY(-50%)" }}/>
-            <input type="text" value={searchName} onChange={e=>setSearchName(e.target.value)}
+            <input type="text" value={searchName} onChange={e=>{ setSearchName(e.target.value); resetSearch(); }}
               onKeyDown={e=>e.key==="Enter"&&handleSearch()} placeholder="Nombre de usuario..."
               style={{ ...inp,paddingLeft:"32px" }}
               onFocus={e=>(e.target.style.borderColor="var(--accent)")}

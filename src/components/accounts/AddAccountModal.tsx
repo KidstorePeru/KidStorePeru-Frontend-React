@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import api from "../../lib/api";
-import { X, Link, CheckCircle, AlertCircle, ExternalLink, Copy, Check } from "lucide-react";
+import { X, Link, CheckCircle, AlertCircle, ExternalLink, Copy, Check, AlertTriangle } from "lucide-react";
+import useEscapeKey from "../../hooks/useEscapeKey";
 
 interface Props {
   onClose: () => void;
@@ -19,6 +20,13 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState("");
   const [linkedPavos, setLinkedPavos] = useState<number | null>(null);
+  // Epic's page, kept so it can be opened by hand if the browser blocked the pop-up.
+  const [epicLink, setEpicLink] = useState("");
+  // Set when the account was linked without permanent credentials.
+  const [fragileLink, setFragileLink] = useState(false);
+
+  const finish = () => { onSuccess(); onClose(); };
+  useEscapeKey(() => (status === "success" ? finish() : onClose()));
 
   const apiMessage = (err: unknown, fallback: string) =>
     (axios.isAxiosError(err) && (err.response?.data?.error as string | undefined)) || fallback;
@@ -31,6 +39,7 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
       if (res.status === 200 && res.data.success && res.data.verification_uri_complete && res.data.device_code) {
         setUserCode(res.data.user_code);
         setDeviceCode(res.data.device_code);
+        setEpicLink(res.data.verification_uri_complete);
         setStatus("idle");
         setStep(2);
         setTimeout(() => window.open(res.data.verification_uri_complete, "_blank"), 800);
@@ -57,7 +66,12 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
         } else {
           setMessage("Cuenta vinculada. Los pavos se leerán desde Epic en unos minutos (puedes sincronizarlos desde el botón + de la cuenta).");
         }
-        setTimeout(() => { onSuccess(); onClose(); }, 2600);
+        if (res.data.device_auth === false) {
+          // The account works for now, but needs the operator to read this: stay open.
+          setFragileLink(true);
+        } else {
+          setTimeout(finish, 2600);
+        }
       } else {
         setStatus("error");
       }
@@ -68,10 +82,12 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
     }
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(userCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(userCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard blocked: the code is on screen to type */ }
   };
 
   return (
@@ -91,7 +107,7 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
         }}
       >
         {/* Cerrar */}
-        <button onClick={onClose} style={{
+        <button onClick={status === "success" ? finish : onClose} aria-label="Cerrar" style={{
           position: "absolute", top: "16px", right: "16px",
           background: "var(--bg-card)", border: "1px solid var(--border)",
           borderRadius: "8px", padding: "5px", cursor: "pointer",
@@ -235,6 +251,13 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                 </button>
               </div>
 
+              {epicLink && status !== "success" && (
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", textAlign: "center", margin: "-8px 0 16px", lineHeight: 1.5 }}>
+                  ¿No se abrió la página de Epic?{" "}
+                  <a href={epicLink} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>Ábrela aquí</a>
+                </p>
+              )}
+
               {/* Estado del botón de confirmar */}
               <button
                 onClick={handleDeviceSync}
@@ -262,13 +285,20 @@ const AddAccountModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                  <><CheckCircle size={15} /> Ya inicié sesión</>}
               </button>
 
+              {fragileLink && (
+                <div role="alert" style={{ display: "flex", gap: "8px", marginTop: "12px", padding: "10px 12px", borderRadius: "10px", background: "var(--warning-bg)", border: "1px solid var(--warning-border)", color: "var(--warning)", fontSize: "12px", lineHeight: 1.45 }}>
+                  <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <span>La cuenta quedó vinculada, pero Epic no entregó credenciales permanentes. Funciona por ahora, pero si entras al juego con esta cuenta puede pedir vincularse de nuevo. Si pasa, repite este proceso.</span>
+                </div>
+              )}
+
               {message && (
                 <p style={{ fontSize: "12px", marginTop: "10px", textAlign: "center", lineHeight: 1.4,
                   color: status === "error" ? "var(--danger)" : "var(--text-secondary)" }}>{message}</p>
               )}
 
-              <button onClick={onClose} style={{ width: "100%", padding: "10px", marginTop: "8px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "13px", cursor: "pointer", fontFamily: ff }}>
-                Cancelar
+              <button onClick={status === "success" ? finish : onClose} style={{ width: "100%", padding: "10px", marginTop: "8px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "13px", cursor: "pointer", fontFamily: ff }}>
+                {status === "success" ? "Entendido" : "Cancelar"}
               </button>
             </motion.div>
           )}

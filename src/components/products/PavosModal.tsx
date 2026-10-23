@@ -4,6 +4,7 @@ import api from "../../lib/api";
 import { Account } from "../accounts";
 import { X, Plus, Edit2, ChevronRight, Check, RefreshCw } from "lucide-react";
 import { timeAgo } from "../../lib/format";
+import useEscapeKey from "../../hooks/useEscapeKey";
 
 interface PavosModalProps {
   account: Account;
@@ -36,6 +37,7 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
   const [giftError, setGiftError] = useState("");
   const [localGifts, setLocalGifts] = useState<number | null>(null);
 
+  useEscapeKey(onClose);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -152,7 +154,7 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
             <p style={{ fontFamily: "'ReadexPro',sans-serif", fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px" }}>Gestionar cuenta</p>
             <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}><span style={{ color: "var(--pink)" }}>{account.displayName}</span></p>
           </div>
-          <button onClick={onClose} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", padding: "6px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+          <button onClick={onClose} aria-label="Cerrar" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", padding: "6px", cursor: "pointer", display: "flex", alignItems: "center" }}>
             <X size={13} color="var(--text-muted)" />
           </button>
         </div>
@@ -186,7 +188,7 @@ const PavosModal: React.FC<PavosModalProps> = ({ account, onClose, onRefresh, on
                 </button>
               </div>
               <p style={{ fontSize: "10px", color: "var(--text-muted)", margin: "6px 0 0", lineHeight: 1.4 }}>
-                Los pavos se leen de Epic automáticamente cada ~30 min. Un ajuste manual sirve mientras tanto, pero la próxima lectura lo reemplaza por el saldo real.
+                Los pavos se leen de Epic automáticamente cada pocos minutos y después de cada regalo. Un ajuste manual sirve mientras tanto, pero la próxima lectura lo reemplaza por el saldo real.
               </p>
               {syncMsg && (
                 <p style={{ fontSize: "11px", margin: "6px 0 0", color: syncMsg.ok ? "var(--success)" : "var(--danger)" }}>

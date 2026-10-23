@@ -4,6 +4,10 @@ import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import api from "../lib/api";
 import { isWebGift } from "../components/orders/types";
+import Notice from "../components/common/Notice";
+import usePageTitle from "../hooks/usePageTitle";
+import usePolling from "../hooks/usePolling";
+import { formatCents, pavosToCents } from "../lib/pricing";
 import MainContent from "../components/navigation/MainContent";
 import { Link } from "react-router-dom";
 import {
@@ -75,7 +79,10 @@ const StatCard: React.FC<{
 );
 
 const DashboardPage: React.FC = () => {
+  usePageTitle("Dashboard");
+
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [error, setError] = useState("");
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -87,8 +94,9 @@ const DashboardPage: React.FC = () => {
     catch { return false; }
   })();
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
+  // `silent` refreshes in the background (no spinner, no error banner).
+  const fetchAll = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [accRes, txRes] = await Promise.all([
         // Admin ve todas las cuentas, usuario solo las suyas
@@ -101,11 +109,16 @@ const DashboardPage: React.FC = () => {
       // adjustments nor gifts read from Epic's history).
       setTxs(((txRes.data.transactions || []) as Transaction[]).filter(t => isWebGift(t.ObjectStoreID)));
       setLastUpdated(new Date());
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+      setError("");
+    } catch (e) {
+      console.error(e);
+      if (!silent) setError("No se pudieron cargar los datos. Revisa tu conexión e inténtalo de nuevo.");
+    }
+    finally { if (!silent) setLoading(false); }
   }, [isAdmin]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+  usePolling(() => fetchAll(true), 60_000);
 
   // ── Cálculos ──
   const today = new Date(); today.setHours(0,0,0,0);
@@ -120,6 +133,10 @@ const DashboardPage: React.FC = () => {
   const totalPavos = accounts.reduce((s,a) => s + (a.pavos||0), 0);
   const totalSlots = accounts.reduce((s,a) => s + (a.remainingGifts||0), 0);
   const totalVbucksSold = txs.reduce((s,t) => s + t.FinalPrice, 0);
+  // Soles: each gift is priced (and rounded) on its own, as it is charged.
+  const sumCents = (list: Transaction[]) => list.reduce((s,t) => s + pavosToCents(t.FinalPrice), 0);
+  const todayCents = sumCents(todayTxs);
+  const soldCents = sumCents(txs);
 
   const last6 = [...txs].sort((a,b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime()).slice(0,6);
 
@@ -178,7 +195,7 @@ const DashboardPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <button onClick={fetchAll} disabled={loading}
+          <button onClick={() => fetchAll()} disabled={loading}
             style={{ display:"flex", alignItems:"center", gap:"6px", padding:"9px 16px",
               borderRadius:"10px", background:"var(--bg-card)", border:"1px solid var(--border)",
               color:"var(--text-secondary)", fontSize:"12px", fontWeight:600,
@@ -189,8 +206,10 @@ const DashboardPage: React.FC = () => {
           </button>
         </div>
 
+        {error && <Notice type="error" text={error} onClose={() => setError("")} />}
+
         {/* Stats */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4, minmax(0,1fr))", gap:"12px", marginBottom:"16px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(210px, 1fr))", gap:"12px", marginBottom:"16px" }}>
           <StatCard icon={<Gift size={18} color="#a78bfa" />} label="Regalos hoy"
             value={todayTxs.length.toString()}
             trend={`${todayTxs.length > yesterdayTxs.length ? "+" : ""}${todayTxs.length - yesterdayTxs.length} vs ayer`}
@@ -198,6 +217,7 @@ const DashboardPage: React.FC = () => {
           <StatCard icon={<TrendingUp size={18} color="#60a5fa" />} label="V-Bucks hoy"
             value={todayVb.toLocaleString()}
             trend={`${todayVb >= yesterdayVb ? "+" : ""}${(todayVb-yesterdayVb).toLocaleString()} vs ayer`}
+            sub={formatCents(todayCents)}
             trendUp={todayVb >= yesterdayVb} accent="#60a5fa" spark={vb7.map(v => v/1000)} />
           <StatCard icon={<CheckCircle size={18} color="#10b981" />} label="Cuentas listas"
             value={accounts.length ? `${readyAccounts} / ${accounts.length}` : "—"}
@@ -206,12 +226,12 @@ const DashboardPage: React.FC = () => {
             trendUp={readyAccounts === accounts.length && accounts.length > 0} accent="#10b981" />
           <StatCard icon={<Coins size={18} color="#fbbf24" />} label="V-Bucks en stock"
             value={totalPavos.toLocaleString()}
-            sub={txs.length ? `${txs.length.toLocaleString()} regalos totales` : undefined}
+            sub={totalPavos > 0 ? `≈ ${formatCents(pavosToCents(totalPavos))}` : undefined}
             accent="#fbbf24" />
         </div>
 
         {/* Gráfico + Cuentas */}
-        <div style={{ display:"grid", gridTemplateColumns:"1.4fr 1fr", gap:"12px", marginBottom:"12px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap:"12px", marginBottom:"12px" }}>
           <div style={{ background:"var(--bg-modal)", border:"1px solid var(--border)", borderRadius:"16px",
             padding:"18px 20px", transition:"background 0.25s, border-color 0.25s" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"16px" }}>
@@ -311,7 +331,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Transacciones + Top Clientes + Top Items */}
-        <div style={{ display:"grid", gridTemplateColumns:"1.6fr 1fr 1fr", gap:"12px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(min(100%, 260px), 1fr))", gap:"12px" }}>
           <div style={{ background:"var(--bg-modal)", border:"1px solid var(--border)", borderRadius:"16px",
             padding:"18px 20px", transition:"background 0.25s, border-color 0.25s" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"14px" }}>
@@ -351,6 +371,7 @@ const DashboardPage: React.FC = () => {
                     <div style={{ textAlign:"right", flexShrink:0 }}>
                       <p style={{ fontSize:"12px", fontWeight:700, color:getPriceColor(tx.FinalPrice), margin:0 }}>
                         {tx.FinalPrice.toLocaleString()}
+                        <span style={{ fontWeight:600, color:"var(--success)", marginLeft:"6px" }}>{formatCents(pavosToCents(tx.FinalPrice))}</span>
                       </p>
                       <p style={{ fontSize:"10px", color:"var(--text-muted)", margin:0, fontFamily:"monospace" }}>
                         {formatDate(tx.CreatedAt)}
@@ -436,12 +457,12 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Totales históricos */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0,1fr))", gap:"12px", marginTop:"12px" }}>
-          {[
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(210px, 1fr))", gap:"12px", marginTop:"12px" }}>
+          {([
             { icon:<Gift size={16} color="#a78bfa"/>, label:"Total regalos enviados", value: txs.length.toLocaleString(), accent:"#a78bfa" },
-            { icon:<TrendingUp size={16} color="#60a5fa"/>, label:"Total V-Bucks facturados", value: totalVbucksSold.toLocaleString(), accent:"#60a5fa" },
+            { icon:<TrendingUp size={16} color="#60a5fa"/>, label:"Total V-Bucks facturados", value: totalVbucksSold.toLocaleString(), sub: formatCents(soldCents), accent:"#60a5fa" },
             { icon:<Users size={16} color="#34d399"/>, label:"Clientes únicos atendidos", value: Object.keys(receiverMap).length.toLocaleString(), accent:"#34d399" },
-          ].map(({ icon, label, value, accent }) => (
+          ] as { icon: React.ReactNode; label: string; value: string; sub?: string; accent: string }[]).map(({ icon, label, value, sub, accent }) => (
             <div key={label} style={{ background:"var(--bg-modal)", border:"1px solid var(--border)",
               borderRadius:"14px", padding:"14px 18px", display:"flex", alignItems:"center", gap:"12px",
               transition:"background 0.25s, border-color 0.25s" }}>
@@ -454,6 +475,7 @@ const DashboardPage: React.FC = () => {
                 <p style={{ fontSize:"18px", fontWeight:700, color:"var(--text-primary)", margin:0,
                   fontFamily:"'ReadexPro',sans-serif" }}>{loading ? "—" : value}</p>
                 <p style={{ fontSize:"11px", color:"var(--text-muted)", margin:0 }}>{label}</p>
+                {sub && !loading && <p style={{ fontSize:"11px", fontWeight:700, color:"var(--success)", margin:"2px 0 0" }}>{sub}</p>}
               </div>
             </div>
           ))}

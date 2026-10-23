@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import api from "../lib/api";
+import Notice from "../components/common/Notice";
 import UsersTable from "../components/users/UsersTable";
 import AddUserModal from "../components/users/AddUserModal";
 import { User } from "../components/users/type";
@@ -10,6 +12,10 @@ import usePageTitle from "../hooks/usePageTitle";
 
 const ff = "'Manrope', sans-serif";
 
+/** The backend's own message (in Spanish) when it sent one. */
+const apiMessage = (err: unknown, fallback: string) =>
+  (axios.isAxiosError(err) && (err.response?.data?.error as string | undefined)) || fallback;
+
 const UsersPage = () => {
   usePageTitle("Usuarios");
 
@@ -17,6 +23,7 @@ const UsersPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [notice, setNotice] = useState<{ type: "error" | "ok"; text: string } | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -26,35 +33,51 @@ const UsersPage = () => {
         email: user.Email ?? "", createdAt: user.CreatedAt,
       }));
       setUsers(users);
-    } catch (err) { console.error("Error fetching users", err); }
+    } catch (err) {
+      console.error("Error fetching users", err);
+      setNotice({ type: "error", text: "No se pudo cargar la lista de usuarios." });
+    }
   };
 
-  const addUser = async (user: Partial<User>) => {
+  // add/update resolve to an error message (or null when it worked), so the
+  // form can show it and stay open instead of closing as if it had saved.
+  const addUser = async (user: Partial<User>): Promise<string | null> => {
     try {
-      const res = await api.post("/addnewuser", user);
-      if (res.status !== 200) throw new Error("Failed to add user");
+      await api.post("/addnewuser", user);
       fetchUsers();
-    } catch (err) { console.error("Error adding user", err); }
+      setNotice({ type: "ok", text: `Usuario "${user.username}" creado.` });
+      return null;
+    } catch (err) {
+      console.error("Error adding user", err);
+      return apiMessage(err, "No se pudo crear el usuario. Inténtalo de nuevo.");
+    }
   };
 
   const updateUser = async (user: User) => {
     setSelectedUser(user); setShowUpdateModal(true);
   };
 
-  const submitUpdateUser = async (user: Partial<User>) => {
+  const submitUpdateUser = async (user: Partial<User>): Promise<string | null> => {
     try {
-      const res = await api.post("/updateuser", user);
-      if (res.status !== 200) throw new Error("Failed to update user");
+      await api.post("/updateuser", user);
       fetchUsers();
-    } catch (err) { console.error("Error updating user", err); }
+      setNotice({ type: "ok", text: "Cambios guardados." });
+      return null;
+    } catch (err) {
+      console.error("Error updating user", err);
+      return apiMessage(err, "No se pudieron guardar los cambios. Inténtalo de nuevo.");
+    }
   };
 
   const deleteUser = async (userId: string) => {
     try {
-      const res = await api.post("/removeusers", [userId]);
-      if (res.status !== 200) throw new Error("Failed to delete user");
+      await api.post("/removeusers", [userId]);
       fetchUsers();
-    } catch (err) { console.error("Error deleting user", err); }
+      setNotice({ type: "ok", text: "Usuario eliminado." });
+    } catch (err) {
+      console.error("Error deleting user", err);
+      setNotice({ type: "error", text: apiMessage(err, "No se pudo eliminar el usuario. Inténtalo de nuevo.") });
+    }
   };
 
   useEffect(() => { fetchUsers(); }, []);
@@ -128,6 +151,8 @@ const UsersPage = () => {
             Añadir usuario
           </button>
         </div>
+
+        {notice && <Notice type={notice.type} text={notice.text} onClose={() => setNotice(null)} />}
 
         <UsersTable users={users} onDelete={deleteUser} onUpdate={updateUser} />
       </div>

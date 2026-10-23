@@ -1,3 +1,5 @@
+import { pavosToCents } from "../../lib/pricing";
+
 export interface Transaction {
   id: string;
   gameAccountID: string;
@@ -33,3 +35,33 @@ export const transactionKind = (objectStoreID?: string | null): TransactionKind 
     : objectStoreID === EPIC_HISTORY_ID ? "game" : "gift";
 
 export const isWebGift = (objectStoreID?: string | null) => transactionKind(objectStoreID) === "gift";
+
+/** Converts a transaction as the API sends it (PascalCase keys) into the UI model. */
+export const mapTransaction = (tx: any): Transaction => ({
+  id: tx.ID, gameAccountID: tx.GameAccountID,
+  senderName: tx.SenderName || null,
+  receiverID: tx.ReceiverID, receiverName: tx.ReceiverName,
+  objectStoreID: tx.ObjectStoreID, objectStoreName: tx.ObjectStoreName,
+  regularPrice: tx.RegularPrice, finalPrice: tx.FinalPrice,
+  giftImage: tx.GiftImage, createdAt: tx.CreatedAt,
+});
+
+/** Sort comparator: newest first (the UI never relies on the server order). */
+export const newestFirst = (a: Transaction, b: Transaction) =>
+  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+/**
+ * Sales statistics. Only gifts sent from this web count: manual slot
+ * adjustments and gifts read from Epic's history are not sales. The soles total
+ * adds the price of each gift (rounded per gift, as it is charged).
+ */
+export function salesStats(transactions: Transaction[]) {
+  const gifts = transactions.filter(t => isWebGift(t.objectStoreID));
+  return {
+    gifts: gifts.length,
+    pavos: gifts.reduce((sum, t) => sum + (t.finalPrice || 0), 0),
+    cents: gifts.reduce((sum, t) => sum + pavosToCents(t.finalPrice || 0), 0),
+    receivers: new Set(gifts.map(t => t.receiverName)).size,
+    senders: new Set(gifts.map(t => t.senderName).filter(Boolean)).size,
+  };
+}

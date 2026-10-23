@@ -6,7 +6,8 @@ import { User as UserType } from "./type";
 
 interface Props {
   users: UserType[];
-  onDelete: (id: string) => void;
+  /** Deletes the user; the row stays dimmed until it finishes. */
+  onDelete: (id: string) => void | Promise<void>;
   onUpdate: (user: UserType) => void;
 }
 
@@ -40,12 +41,13 @@ const UsersTable: React.FC<Props> = ({ users, onDelete, onUpdate }) => {
     setConfirmName(username);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!confirmId) return;
-    setDeletingId(confirmId);
-    onDelete(confirmId);
+    const id = confirmId;
     setConfirmId(null);
     setConfirmName("");
+    setDeletingId(id);
+    try { await onDelete(id); } finally { setDeletingId(null); }
   };
 
   const getAvatarColors = (name: string) => {
@@ -62,7 +64,7 @@ const UsersTable: React.FC<Props> = ({ users, onDelete, onUpdate }) => {
       {confirmId && (
         <ConfirmModal
           title="Eliminar usuario"
-          message={`¿Seguro que quieres eliminar a "${confirmName}"? Esta acción no se puede deshacer.`}
+          message={`¿Seguro que quieres eliminar a "${confirmName}"? Si tiene cuentas de Fortnite vinculadas, también se eliminarán. Esta acción no se puede deshacer.`}
           confirmLabel="Eliminar usuario"
           onConfirm={handleConfirmDelete}
           onCancel={() => { setConfirmId(null); setConfirmName(""); }}
@@ -106,6 +108,9 @@ const UsersTable: React.FC<Props> = ({ users, onDelete, onUpdate }) => {
         </div>
       </div>
 
+      {/* On narrow screens the columns keep their width and the table scrolls sideways */}
+      <div style={{ overflowX: "auto" }}>
+      <div style={{ minWidth: 660 }}>
       {/* Cabecera */}
       <div style={{
         display: "grid", gridTemplateColumns: GRID,
@@ -233,6 +238,8 @@ const UsersTable: React.FC<Props> = ({ users, onDelete, onUpdate }) => {
           })
         )}
       </AnimatePresence>
+      </div>
+      </div>
     </div>
     </>
   );

@@ -27,7 +27,14 @@ export const setSessionToken = (token: string) =>
  * Shared axios instance. Automatically attaches the session token and, on a
  * 401, clears the session and bounces the user to the login screen.
  */
-const api = axios.create({ baseURL: API_URL });
+const api = axios.create({ baseURL: API_URL, timeout: 45_000 });
+
+/**
+ * Sending a gift can legitimately take a while (the backend reads the account
+ * from Epic, then sends the gift, each call with its own limit), so it gets more
+ * room than the rest and is never cut off before the server answers.
+ */
+export const GIFT_TIMEOUT_MS = 150_000;
 
 api.interceptors.request.use((config) => {
   const token = getToken();

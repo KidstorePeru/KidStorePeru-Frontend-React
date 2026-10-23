@@ -7,7 +7,7 @@ const ff = "'Manrope', sans-serif";
 
 const NotFoundPage: React.FC = () => (
   <div style={{
-    width:"100vw", height:"100vh",
+    width:"100vw", minHeight:"100vh", padding:"16px",
     display:"flex", alignItems:"center", justifyContent:"center",
     background:"var(--bg-base)", fontFamily:ff,
   }}>
@@ -36,7 +36,7 @@ const NotFoundPage: React.FC = () => (
         La página que buscas no existe o fue movida.
       </p>
       <Link to="/dashboard" style={{ textDecoration:"none" }}>
-        <button style={{
+        <span style={{
           display:"inline-flex", alignItems:"center", gap:"8px",
           padding:"11px 24px", borderRadius:"10px",
           background:"var(--accent)", border:"none",
@@ -49,7 +49,7 @@ const NotFoundPage: React.FC = () => (
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = "1"}
         >
           <Home size={15} /> Volver al Dashboard
-        </button>
+        </span>
       </Link>
     </motion.div>
   </div>

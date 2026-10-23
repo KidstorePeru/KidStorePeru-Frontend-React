@@ -19,6 +19,8 @@ export type Account = {
     friendsCount?: number | null;
     friendsMax?: number;
     friendsFull?: boolean;
+    /** False when the account has no permanent Epic credentials (fragile link). */
+    deviceAuth?: boolean;
 };
 
 export type rawAccount = {
@@ -31,6 +33,7 @@ export type rawAccount = {
     friendsCount?: number | null;
     friendsMax?: number;
     friendsFull?: boolean;
+    deviceAuth?: boolean;
 };
 
 export type rawAccountResponse = {
@@ -49,4 +52,6 @@ export const mapAccount = (acc: rawAccount): Account => ({
     friendsCount: acc.friendsCount ?? null,
     friendsMax: acc.friendsMax ?? 0,
     friendsFull: acc.friendsFull ?? false,
+    // older backends do not send it: only an explicit false is treated as fragile
+    deviceAuth: acc.deviceAuth,
 });

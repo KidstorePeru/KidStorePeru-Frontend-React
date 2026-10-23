@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { X, UserPlus, User, Mail, Lock } from "lucide-react";
 import { User as UserType } from "./type";
+import useEscapeKey from "../../hooks/useEscapeKey";
 
 interface Props {
   onClose: () => void;
-  onSave: (user: Partial<UserType>) => void;
+  /** Resolves to an error message, or null when the user was created. */
+  onSave: (user: Partial<UserType>) => Promise<string | null>;
 }
 
 const ff = "'Manrope', sans-serif";
@@ -14,11 +16,16 @@ const AddUserModal: React.FC<Props> = ({ onClose, onSave }) => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  useEscapeKey(onClose);
 
-  const handleSubmit = () => {
-    if (!username.trim() || !password.trim()) return;
-    onSave({ username, email, password });
-    onClose();
+  const handleSubmit = async () => {
+    if (saving || !username.trim() || !password.trim()) return;
+    setSaving(true); setError("");
+    const problem = await onSave({ username: username.trim(), email: email.trim(), password });
+    setSaving(false);
+    if (problem) setError(problem); else onClose();
   };
 
   const fields = [
@@ -37,7 +44,7 @@ const AddUserModal: React.FC<Props> = ({ onClose, onSave }) => {
         style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "20px", padding: "24px", maxWidth: "400px", width: "100%", position: "relative", fontFamily: ff }}
       >
         {/* Cerrar */}
-        <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", padding: "5px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+        <button onClick={onClose} aria-label="Cerrar" style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", padding: "5px", cursor: "pointer", display: "flex", alignItems: "center" }}>
           <X size={13} color="var(--text-muted)" />
         </button>
 
@@ -80,6 +87,10 @@ const AddUserModal: React.FC<Props> = ({ onClose, onSave }) => {
           ))}
         </div>
 
+        {error && (
+          <div role="alert" style={{ padding: "9px 12px", borderRadius: "8px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", color: "var(--danger)", fontSize: "12px", marginBottom: "14px" }}>{error}</div>
+        )}
+
         {/* Botones */}
         <div style={{ display: "flex", gap: "8px" }}>
           <button onClick={onClose} style={{ flex: 1, padding: "10px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "13px", cursor: "pointer", fontFamily: ff }}>
@@ -87,10 +98,10 @@ const AddUserModal: React.FC<Props> = ({ onClose, onSave }) => {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!username.trim() || !password.trim()}
-            style={{ flex: 1, padding: "10px", borderRadius: "10px", background: "var(--accent)", border: "none", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: !username.trim() || !password.trim() ? "not-allowed" : "pointer", fontFamily: ff, opacity: !username.trim() || !password.trim() ? 0.5 : 1, transition: "opacity 0.15s" }}
+            disabled={saving || !username.trim() || !password.trim()}
+            style={{ flex: 1, padding: "10px", borderRadius: "10px", background: "var(--accent)", border: "none", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: !username.trim() || !password.trim() ? "not-allowed" : "pointer", fontFamily: ff, opacity: saving || !username.trim() || !password.trim() ? 0.5 : 1, transition: "opacity 0.15s" }}
           >
-            Crear usuario
+            {saving ? "Creando..." : "Crear usuario"}
           </button>
         </div>
       </motion.div>

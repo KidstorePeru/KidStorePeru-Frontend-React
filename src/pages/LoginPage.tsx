@@ -48,7 +48,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div style={{ width:"100vw", height:"100vh", display:"flex", alignItems:"center",
+    <div style={{ width:"100vw", minHeight:"100vh", padding:"16px", display:"flex", alignItems:"center",
       justifyContent:"center", background:"var(--bg-base)", fontFamily:"'Manrope',sans-serif",
       transition:"background 0.25s ease" }}>
 
@@ -82,11 +82,11 @@ const LoginPage = () => {
           <div>
             <label style={{ display:"block", fontSize:"11px", fontWeight:600,
               color:"var(--text-label)", letterSpacing:"0.06em",
-              textTransform:"uppercase", marginBottom:"7px" }}>Usuario</label>
+              textTransform:"uppercase", marginBottom:"7px" }} htmlFor="login-user">Usuario</label>
             <div style={{ position:"relative" }}>
               <User size={15} color="var(--text-muted)"
                 style={{ position:"absolute", left:"13px", top:"50%", transform:"translateY(-50%)" }} />
-              <input type="text" value={username} onChange={e=>setUsername(e.target.value)}
+              <input id="login-user" type="text" value={username} onChange={e=>setUsername(e.target.value)}
                 placeholder="Ingresa tu usuario" autoComplete="username" style={inp}
                 onFocus={e=>(e.target.style.borderColor="var(--accent)")}
                 onBlur={e=>(e.target.style.borderColor="var(--border)")} />
@@ -96,17 +96,17 @@ const LoginPage = () => {
           <div>
             <label style={{ display:"block", fontSize:"11px", fontWeight:600,
               color:"var(--text-label)", letterSpacing:"0.06em",
-              textTransform:"uppercase", marginBottom:"7px" }}>Contraseña</label>
+              textTransform:"uppercase", marginBottom:"7px" }} htmlFor="login-password">Contraseña</label>
             <div style={{ position:"relative" }}>
               <Lock size={15} color="var(--text-muted)"
                 style={{ position:"absolute", left:"13px", top:"50%", transform:"translateY(-50%)" }} />
-              <input type={showPassword?"text":"password"} value={password}
+              <input id="login-password" type={showPassword?"text":"password"} value={password}
                 onChange={e=>setPassword(e.target.value)}
                 placeholder="Ingresa tu contraseña" autoComplete="current-password"
                 style={{ ...inp, paddingRight:"42px" }}
                 onFocus={e=>(e.target.style.borderColor="var(--accent)")}
                 onBlur={e=>(e.target.style.borderColor="var(--border)")} />
-              <button type="button" onClick={()=>setShowPassword(!showPassword)}
+              <button type="button" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={()=>setShowPassword(!showPassword)}
                 style={{ position:"absolute", right:"13px", top:"50%", transform:"translateY(-50%)",
                   background:"none", border:"none", cursor:"pointer", padding:0,
                   display:"flex", alignItems:"center" }}>

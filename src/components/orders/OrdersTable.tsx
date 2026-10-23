@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Transaction, transactionKind } from "./types";
+import { formatSoles, RATE_LABEL } from "../../lib/pricing";
+import { VBUCK_ICON } from "../../lib/assets";
 
 interface Props {
   transactions: Transaction[];
@@ -123,6 +125,9 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
         </span>
       </div>
 
+      {/* On narrow screens the columns keep their width and the table scrolls sideways */}
+      <div style={{ overflowX: "auto" }}>
+      <div style={{ minWidth: 780 }}>
       {/* Cabecera tabla */}
       <div style={{
         display: "grid",
@@ -223,12 +228,21 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
               </div>
 
               {/* Precio */}
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <img src="https://fortnite-api.com/images/vbuck.png" style={{ width: "12px", height: "12px" }} alt="vb" />
-                <span style={{ fontSize: "13px", fontWeight: 700, color: priceColor }}>
-                  {tx.finalPrice.toLocaleString()}
-                </span>
-              </div>
+              {manual ? (
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>—</span>
+              ) : (
+                <div title={RATE_LABEL}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <img src={VBUCK_ICON} style={{ width: "12px", height: "12px" }} alt="V-Bucks" />
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: priceColor }}>
+                      {tx.finalPrice.toLocaleString()}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--success)", margin: "2px 0 0" }}>
+                    {formatSoles(tx.finalPrice)}
+                  </p>
+                </div>
+              )}
 
               {/* Fecha */}
               <div>
@@ -240,12 +254,15 @@ const OrdersTable: React.FC<Props> = ({ transactions, loading = false }) => {
         })
       )}
 
+      </div>
+      </div>
+
       {/* Paginación */}
       {!loading && totalPages > 1 && (
         <div style={{
           padding: "12px 20px",
           borderTop: "1px solid var(--border)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+          display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px",
           background: "var(--bg-card)",
         }}>
           <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>

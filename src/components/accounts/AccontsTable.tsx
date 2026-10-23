@@ -1,4 +1,3 @@
-import FriendsBadge from "./FriendsBadge";
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Gamepad2 } from "lucide-react";
@@ -6,16 +5,23 @@ import ConfirmModal from "../common/ConfirmModal";
 import { Account } from "./types";
 import GiftSlotStatusInline from "../products/GiftSlotStatusInline";
 import { isFresh, timeAgo } from "../../lib/format";
+import FriendsBadge from "./FriendsBadge";
+import DeviceAuthBadge from "./DeviceAuthBadge";
 
 interface Props {
   accounts: Account[];
-  onDelete: (id: string) => void;
+  /** Deletes the account; may be async so the confirm dialog can wait for it. */
+  onDelete: (id: string) => void | Promise<void>;
   showGiftStatus?: boolean;
+  /** True until the first load finishes (shows a loading message, not "no accounts"). */
+  loading?: boolean;
+  /** Reload the accounts when a gift timer runs out (see GiftSlotStatusInline). */
+  onSlotFreed?: () => void;
 }
 
 const ff = "'Manrope', sans-serif";
 
-const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = false }) => {
+const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = false, loading = false, onSlotFreed }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [confirmName, setConfirmName] = useState<string>("");
@@ -89,6 +95,9 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
         </div>
       </div>
 
+      {/* On narrow screens the columns keep their width and the table scrolls sideways */}
+      <div style={{ overflowX: "auto" }}>
+      <div style={{ minWidth: 700 }}>
       {/* Cabecera */}
       <div style={{
         display: "grid", gridTemplateColumns: GRID,
@@ -110,7 +119,7 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
           <div style={{ padding: "48px 20px", textAlign: "center" }}>
             <Gamepad2 size={28} color="var(--text-muted)" style={{ margin: "0 auto 10px", display: "block" }} />
             <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
-              {searchTerm ? "No se encontraron cuentas" : "No hay cuentas registradas"}
+              {loading ? "Cargando cuentas..." : searchTerm ? "No se encontraron cuentas" : "No hay cuentas registradas"}
             </p>
           </div>
         ) : (
@@ -163,6 +172,7 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
                   background: isFresh(acc.pavosSyncedAt) ? "var(--success)" : "var(--warning)" }} />
                 </div>
                 <FriendsBadge account={acc} compact />
+                <DeviceAuthBadge deviceAuth={acc.deviceAuth} />
               </div>
 
               {/* Estado regalos */}
@@ -171,6 +181,7 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
                   <GiftSlotStatusInline
                     giftSlotStatus={acc.giftSlotStatus}
                     remainingGiftsOverride={acc.remainingGifts}
+                    onSlotFreed={onSlotFreed}
                   />
                 </div>
               ) : (
@@ -204,6 +215,8 @@ const AccountsTable: React.FC<Props> = ({ accounts, onDelete, showGiftStatus = f
           ))
         )}
       </AnimatePresence>
+      </div>
+      </div>
     </div>
     </>
   );

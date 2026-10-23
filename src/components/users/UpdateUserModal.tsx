@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X, User, Mail, Lock } from "lucide-react";
 import { User as UserType } from "./type";
+import useEscapeKey from "../../hooks/useEscapeKey";
 
 interface Props {
   user: UserType;
   onClose: () => void;
-  onUpdate: (user: Partial<UserType>) => void;
+  /** Resolves to an error message, or null when the changes were saved. */
+  onUpdate: (user: Partial<UserType>) => Promise<string | null>;
 }
 
 const ff = "'Manrope', sans-serif";
@@ -15,6 +17,9 @@ const UpdateUserModal: React.FC<Props> = ({ user, onClose, onUpdate }) => {
   const [username, setUsername] = useState(user.username);
   const [email, setEmail] = useState(user.email);
   const [password, setPassword] = useState(user.password || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  useEscapeKey(onClose);
 
   useEffect(() => {
     setUsername(user.username);
@@ -22,10 +27,15 @@ const UpdateUserModal: React.FC<Props> = ({ user, onClose, onUpdate }) => {
     setPassword(user.password || "");
   }, [user]);
 
-  const handleSubmit = () => {
-    if (!username.trim()) return;
-    onUpdate({ id: user.id, username, email, password });
-    onClose();
+  const handleSubmit = async () => {
+    if (saving || !username.trim()) return;
+    setSaving(true); setError("");
+    // a blank password means "keep the current one": it is not sent at all
+    const changes: Partial<UserType> = { id: user.id, username: username.trim(), email: email.trim() };
+    if (password.trim()) changes.password = password;
+    const problem = await onUpdate(changes);
+    setSaving(false);
+    if (problem) setError(problem); else onClose();
   };
 
   const fields = [
@@ -42,7 +52,7 @@ const UpdateUserModal: React.FC<Props> = ({ user, onClose, onUpdate }) => {
         transition={{ duration: 0.2, ease: "easeOut" }}
         style={{ background: "var(--bg-modal)", border: "1px solid var(--border)", borderRadius: "20px", padding: "24px", maxWidth: "400px", width: "100%", position: "relative", fontFamily: ff }}
       >
-        <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", padding: "5px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+        <button onClick={onClose} aria-label="Cerrar" style={{ position: "absolute", top: "16px", right: "16px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", padding: "5px", cursor: "pointer", display: "flex", alignItems: "center" }}>
           <X size={13} color="var(--text-muted)" />
         </button>
 
@@ -77,16 +87,20 @@ const UpdateUserModal: React.FC<Props> = ({ user, onClose, onUpdate }) => {
           ))}
         </div>
 
+        {error && (
+          <div role="alert" style={{ padding: "9px 12px", borderRadius: "8px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", color: "var(--danger)", fontSize: "12px", marginBottom: "14px" }}>{error}</div>
+        )}
+
         <div style={{ display: "flex", gap: "8px" }}>
           <button onClick={onClose} style={{ flex: 1, padding: "10px", borderRadius: "10px", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", fontSize: "13px", cursor: "pointer", fontFamily: ff }}>
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!username.trim()}
-            style={{ flex: 1, padding: "10px", borderRadius: "10px", background: "var(--accent)", border: "none", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: !username.trim() ? "not-allowed" : "pointer", fontFamily: ff, opacity: !username.trim() ? 0.5 : 1, transition: "opacity 0.15s" }}
+            disabled={saving || !username.trim()}
+            style={{ flex: 1, padding: "10px", borderRadius: "10px", background: "var(--accent)", border: "none", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: !username.trim() ? "not-allowed" : "pointer", fontFamily: ff, opacity: saving || !username.trim() ? 0.5 : 1, transition: "opacity 0.15s" }}
           >
-            Guardar cambios
+            {saving ? "Guardando..." : "Guardar cambios"}
           </button>
         </div>
       </motion.div>

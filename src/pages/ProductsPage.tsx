@@ -9,10 +9,12 @@ import PavosModal from "../components/products/PavosModal";
 import { Account, mapAccount, rawAccountResponse } from "../components/accounts";
 import { Friend } from "../components/products/GiftModal";
 import MainContent from "../components/navigation/MainContent";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { GIFT_TIMEOUT_MS } from "../lib/api";
 import usePageTitle from "../hooks/usePageTitle";
 import useShopCountdown from "../hooks/useShopCountdown";
+import usePolling from "../hooks/usePolling";
 
 export type RawEntry = any;
 
@@ -39,7 +41,8 @@ const ProductsPage: React.FC = () => {
 
   const [itemsByCategory, setItemsByCategory] = useState<Record<string, ShopEntry[]>>({});
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [accountsKey, setAccountsKey] = useState(0);
+  const [accountsLoaded, setAccountsLoaded] = useState(false);
+  const [sending, setSending] = useState<{ item: string; receiver: string } | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [selectedAccountPavos, setSelectedAccountPavos] = useState<Account | null>(null);
   const [selectedItem, setSelectedItem] = useState<ShopEntry | null>(null);
@@ -107,7 +110,6 @@ const ProductsPage: React.FC = () => {
           return bRemaining - aRemaining;
         });
         setAccounts(parsed);
-        setAccountsKey(k => k + 1);
         setLastRefreshed(new Date());
         setSelectedAccount(prev => {
           if (!prev) return prev;
@@ -119,18 +121,15 @@ const ProductsPage: React.FC = () => {
         });
       } else { setAccounts([]); }
     } catch (err) { console.error(err); }
+    finally { setAccountsLoaded(true); }
   }, []);
 
   // Initial load, then poll accounts every 60s and re-fetch the shop every
   // 10 min so a stale offerId (after the daily rotation) can't cause a gift
-  // that silently fails at Epic.
-  useEffect(() => {
-    fetchShop();
-    fetchAccounts();
-    const accountsIv = setInterval(fetchAccounts, AUTO_REFRESH_INTERVAL);
-    const shopIv = setInterval(fetchShop, SHOP_REFRESH_INTERVAL);
-    return () => { clearInterval(accountsIv); clearInterval(shopIv); };
-  }, [fetchShop, fetchAccounts]);
+  // that silently fails at Epic. Both pause while the tab is hidden.
+  useEffect(() => { fetchShop(); fetchAccounts(); }, [fetchShop, fetchAccounts]);
+  usePolling(fetchAccounts, AUTO_REFRESH_INTERVAL);
+  usePolling(fetchShop, SHOP_REFRESH_INTERVAL);
 
   // Keep the real pavos / gift slots live: while this page is open and visible,
   // ask the backend to re-read every account from Epic (one at a time, spaced
@@ -181,12 +180,13 @@ const ProductsPage: React.FC = () => {
   }, [selectedAccount]);
 
   const sendGift = async (recipient: Friend) => {
-    if (!selectedItem || !selectedAccount) return;
+    if (!selectedItem || !selectedAccount || sending) return;
     try {
       if (selectedAccount.giftSlotStatus && selectedAccount.giftSlotStatus.remaining_gifts <= 0) {
         setLastGiftResponse({ success: false, error: "No hay slots disponibles." });
         setShowErrorModal(true); return;
       }
+      setSending({ item: selectedItem.itemDisplay.name, receiver: recipient.username });
       const res = await api.post("/sendGift", {
         account_id: selectedAccount.id, sender_username: selectedAccount.displayName,
         receiver_id: recipient.id, receiver_username: recipient.username,
@@ -194,15 +194,23 @@ const ProductsPage: React.FC = () => {
         gift_name: selectedItem.itemDisplay.name,
         message: `¡Disfruta tu regalo de ${selectedAccount.displayName}!`,
         gift_image: selectedItem.itemDisplay.image,
-      });
+      }, { timeout: GIFT_TIMEOUT_MS });
       const data = res.data;
       if (data.success === true) {
         setLastGiftResponse({ ...data, sentAt: new Date().toISOString() }); setShowGiftModal(false); setShowSuccessModal(true); fetchAccounts();
       } else { setLastGiftResponse(data); setShowErrorModal(true); }
     } catch (err) {
       const apiError = axios.isAxiosError(err) ? err.response?.data : null;
-      setLastGiftResponse(apiError ?? { success: false, error: "No se pudo enviar el regalo." });
+      // No answer at all (connection lost / timeout): the gift may still have gone
+      // out, so do not invite an immediate retry that could send it twice.
+      setLastGiftResponse(apiError ?? {
+        success: false,
+        error: "No hubo respuesta del servidor.",
+        details: "El regalo pudo haberse enviado. Revisa el Historial y las cuentas antes de intentarlo de nuevo.",
+      });
       setShowGiftModal(false); setShowErrorModal(true);
+    } finally {
+      setSending(null);
     }
   };
 
@@ -242,7 +250,6 @@ const ProductsPage: React.FC = () => {
               normalize(a.id) === normalize(updated.account_id)
                 ? { ...a, pavos: updated.new_pavos } : a
             ));
-            setAccountsKey(k => k + 1);
             setSelectedAccount(prev =>
               prev && normalize(prev.id) === normalize(updated.account_id)
                 ? { ...prev, pavos: updated.new_pavos } : prev
@@ -253,6 +260,19 @@ const ProductsPage: React.FC = () => {
             );
           }}
         />
+      )}
+
+      {sending && (
+        <div role="status" aria-live="polite" style={{ ...overlayStyle, zIndex: 70, background: "rgba(0,0,0,0.7)" }}>
+          <div style={{ ...modalStyle, maxWidth: "340px", textAlign: "center" }}>
+            <Loader2 size={30} color="var(--accent)" className="animate-spin" style={{ margin: "0 auto 14px", display: "block" }} />
+            <p style={{ fontFamily: "'ReadexPro',sans-serif", fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", margin: "0 0 6px" }}>Enviando regalo…</p>
+            <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: "0 0 10px", lineHeight: 1.5 }}>
+              <strong>{sending.item}</strong> para <strong style={{ color: "var(--pink)" }}>{sending.receiver}</strong>
+            </p>
+            <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>Puede tardar unos segundos. No cierres ni recargues la página.</p>
+          </div>
+        </div>
       )}
 
       {showErrorModal && (
@@ -297,7 +317,7 @@ const ProductsPage: React.FC = () => {
           </h1>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "20px" }}>
             <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
-              {accounts.length} cuentas disponibles
+              {accountsLoaded ? `${accounts.length} cuenta${accounts.length === 1 ? "" : "s"} disponible${accounts.length === 1 ? "" : "s"}` : "Cargando cuentas..."}
             </p>
             <span style={{ color: "var(--border)" }}>·</span>
             <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
@@ -313,7 +333,7 @@ const ProductsPage: React.FC = () => {
             {accounts.length > 0 ? (
               accounts.map(account => (
                 <AccountCard
-                  key={`${account.id}-${accountsKey}`}
+                  key={account.id}
                   account={account}
                   onClick={() => setSelectedAccount(account)}
                   selected={selectedAccount?.id === account.id}
@@ -327,7 +347,7 @@ const ProductsPage: React.FC = () => {
               ))
             ) : (
               <p style={{ color: "var(--text-muted)", textAlign: "center", gridColumn: "1/-1", fontSize: "13px" }}>
-                No tienes cuentas de Fortnite
+                {accountsLoaded ? "No tienes cuentas de Fortnite" : "Cargando cuentas..."}
               </p>
             )}
           </div>

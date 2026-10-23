@@ -7,7 +7,7 @@ admins also manage users and see every account and transaction.
 ## Stack
 
 - React 18 + Vite 5, TypeScript (strict)
-- React Router 6
+- React Router 7
 - axios (one shared instance in `src/lib/api.ts`)
 - Tailwind for a few utilities; most styling is inline
 - framer-motion, lucide-react
